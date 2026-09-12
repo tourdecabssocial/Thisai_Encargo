@@ -36,130 +36,69 @@ export interface StageCharge {
   chargeName: string;
   amount: number;
   notes: string;
+  applicableScopes?: string[];
 }
 
 export const getStageCharges = (
   stageId: string,
-  stageCategory: 'Origin' | 'Main Freight' | 'Destination',
-  mode: string = 'Ship'
+  mode: string = 'Ship',
+  serviceScope: string = 'D2D'
 ): StageCharge[] => {
+  const ALL = ['D2D', 'D2P', 'P2P', 'P2D'];
+  const ORIGIN_DOOR = ['D2D', 'D2P'];
+  const DEST_DOOR = ['D2D', 'P2D'];
+
+  let charges: StageCharge[] = [];
+
   switch (stageId) {
-    case 'origin_pickup':
-      return [
-        {
-          category: 'First Mile / Transport',
-          stage: 'Origin',
-          chargeName: mode === 'Air' ? 'Airport Express Trucking' : 'Factory Pickup / Carting',
-          amount: 180,
-          notes: 'Transport of cargo/container from shipper premises to CFS or port terminal',
-        },
-        {
-          category: 'Packaging & Warehousing',
-          stage: 'Origin',
-          chargeName: 'Cargo Lashing & Palletization',
-          amount: 95,
-          notes: 'Securing cargo packages, shrink-wrapping, and heavy-duty strapping at origin warehouse',
-        },
+    case 'origin':
+      charges = [
+        { applicableScopes: ORIGIN_DOOR, category: 'First Mile / Transport', stage: 'Origin', chargeName: 'Factory Pickup / Carting', amount: 180, notes: 'Transport of cargo/container from shipper premises to CFS or port terminal' },
+        { applicableScopes: ORIGIN_DOOR, category: 'Packaging & Warehousing', stage: 'Origin', chargeName: 'CFS Handling & Stuffing', amount: 210, notes: 'Cargo handling, palletization, shrink-wrapping, stuffing & labor at origin CFS' },
+        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Clearance', stage: 'Origin', chargeName: 'Export Customs Brokerage (CHA)', amount: 150, notes: 'Professional export customs broker agency service fee' },
+        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Clearance', stage: 'Origin', chargeName: 'Shipping Bill Filing & Processing', amount: 65, notes: 'Electronic filing, checklist generation & ICEGATE EDI processing fee' },
+        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Compliance', stage: 'Origin', chargeName: 'Customs Examination & Scanning Fee', amount: 90, notes: 'Physical container inspection, X-ray scanning, open examination & officer fees' },
+        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Compliance', stage: 'Origin', chargeName: 'Certificate & Regulatory Documentation', amount: 45, notes: 'Issuance of Certificate of Origin (COO), legalization, fumigation & export permits' },
+        { applicableScopes: ALL, category: 'Terminal & Port', stage: 'Origin', chargeName: 'Origin Terminal Handling Charges (OTHC)', amount: 250, notes: 'Container handling, yard movement & vessel loading fees at origin port' },
+        { applicableScopes: ALL, category: 'Terminal & Port', stage: 'Origin', chargeName: 'Verified Gross Mass (VGM) Charges', amount: 25, notes: 'SOLAS weighbridge certification, electronic data submission & admin fee' },
+        { applicableScopes: ALL, category: 'Terminal & Port', stage: 'Origin', chargeName: 'Seal & Equipment Maintenance', amount: 15, notes: 'High-security ISO container seal fee and container pre-trip washing/cleaning' },
+        { applicableScopes: ALL, category: 'Documentation', stage: 'Origin', chargeName: 'Bill of Lading (B/L) Issuance Fee', amount: 50, notes: 'Carrier documentation issuance, electronic manifest transmission & drafting' },
+        { applicableScopes: ALL, category: 'Documentation & Admin', stage: 'Origin', chargeName: 'B/L & Manifest Amendment Fee', amount: 35, notes: 'Corrections, revisions, or destination changes after manifest closure' },
       ];
+      break;
 
-    case 'origin_terminal':
-      return [
-        {
-          category: 'Packaging & Warehousing',
-          stage: 'Origin',
-          chargeName: 'CFS Handling & Stuffing',
-          amount: 210,
-          notes: 'Cargo handling, palletization, shrink-wrapping, stuffing & labor at origin CFS',
-        },
-        {
-          category: 'Customs & Clearance',
-          stage: 'Origin',
-          chargeName: 'Export Customs Brokerage (CHA)',
-          amount: 150,
-          notes: 'Professional export customs broker agency service fee',
-        },
-        {
-          category: 'Customs & Clearance',
-          stage: 'Origin',
-          chargeName: 'Shipping Bill Filing & Processing',
-          amount: 65,
-          notes: 'Electronic filing, checklist generation & ICEGATE EDI processing fee',
-        },
+    case 'freight':
+      charges = [
+        { applicableScopes: ALL, category: 'Freight & Transit', stage: 'Main Freight', chargeName: mode === 'Air' ? 'Air Freight (OF)' : 'Ocean Freight (OF)', amount: 1450, notes: 'Basic ocean/air carriage charge from origin port of loading to destination port' },
+        { applicableScopes: ALL, category: 'Freight & Transit', stage: 'Main Freight', chargeName: 'Bunker & Currency Adjustments (BAF / CAF / LSS)', amount: 220, notes: 'Fuel price fluctuation (BAF), low-sulfur fuel compliance (LSS) & currency adjustment (CAF)' },
+        { applicableScopes: ALL, category: 'Freight & Transit', stage: 'Main Freight', chargeName: 'Trade Lane Surcharges (PSS / GRI / EIS / PCS)', amount: 150, notes: 'Peak season (PSS), general rate increases (GRI), equipment imbalance (EIS) & congestion (PCS)' },
+        { applicableScopes: ALL, category: 'Customs & Compliance', stage: 'Main Freight', chargeName: 'Security & Advance Manifest Filing (AMS / ISF / ENS)', amount: 60, notes: 'Regulatory electronic filing fees to destination customs (e.g., US AMS/ISF, EU ENS)' },
       ];
+      break;
 
-    case 'main_transit':
-      return [
-        {
-          category: 'Freight & Linehaul',
-          stage: 'Main Freight',
-          chargeName: mode === 'Air' ? 'Air Freight Flight Linehaul' : 'Ocean Freight Linehaul Rate',
-          amount: 1450,
-          notes: 'Primary international carrier port-to-port linehaul transport rate',
-        },
-        {
-          category: 'Freight & Linehaul',
-          stage: 'Main Freight',
-          chargeName: 'Bunker Adjustment / Fuel Surcharge',
-          amount: 220,
-          notes: 'Fluctuating fuel surcharge applied per TEU / CBM by carrier line',
-        },
+    case 'destination':
+      charges = [
+        { applicableScopes: ALL, category: 'Port & Terminal', stage: 'Destination', chargeName: 'Destination THC (DTHC)', amount: 310, notes: 'Vessel discharging, gantry crane handling & container staging at destination port' },
+        { applicableScopes: ALL, category: 'Port & Terminal', stage: 'Destination', chargeName: 'Delivery Order (D/O) Fee', amount: 85, notes: 'Shipping line document issuance fee authorizing port/CFS cargo release' },
+        { applicableScopes: ALL, category: 'Port & Terminal', stage: 'Destination', chargeName: 'Port Facility & Security Dues (ISPS / Port Dues)', amount: 45, notes: 'Terminal security compliance (ISPS), channel dues & port infrastructure fees' },
+        { applicableScopes: DEST_DOOR, category: 'Customs & Clearance', stage: 'Destination', chargeName: 'Import Customs Brokerage', amount: 175, notes: 'Destination customs clearance services, tariff classification & representation' },
+        { applicableScopes: DEST_DOOR, category: 'Customs & Clearance', stage: 'Destination', chargeName: 'Bill of Entry / Import Declaration', amount: 70, notes: 'Formal electronic customs entry declaration filing fee' },
+        { applicableScopes: DEST_DOOR, category: 'Customs & Compliance', stage: 'Destination', chargeName: 'Import Customs Inspection & Examination', amount: 120, notes: 'Physical destuffing, customs examination, X-ray scanning & sampling at destination CFS' },
+        { applicableScopes: DEST_DOOR, category: 'Customs & Compliance', stage: 'Destination', chargeName: 'Customs Bond & In-Bond Transfer', amount: 65, notes: 'Bond execution and carrier in-bond transit filing for inland movement' },
+        { applicableScopes: DEST_DOOR, category: 'Statutory Charges', stage: 'Destination', chargeName: 'Customs Duty, Taxes & Statutory Surcharges', amount: 850, notes: 'Government import customs duty, IGST/VAT, anti-dumping duty & statutory surcharges' },
+        { applicableScopes: DEST_DOOR, category: 'Last Mile / Transport', stage: 'Destination', chargeName: 'Destination Delivery / Trucking Charges', amount: 240, notes: 'Transport from destination port/CFS to buyer warehouse or final destination' },
+        { applicableScopes: DEST_DOOR, category: 'Last Mile / Transport', stage: 'Destination', chargeName: 'Chassis Rental / Usage Fee', amount: 90, notes: 'Dedicated trailer chassis usage fee for container drayage delivery (common in North America)' },
+        { applicableScopes: ALL, category: 'Contingent Charges', stage: 'Destination', chargeName: 'Demurrage & Detention (D&D)', amount: 0, notes: 'Penalties for container equipment usage (Detention) and port storage (Demurrage) exceeding free days' },
       ];
-
-    case 'destination_customs':
-      return [
-        {
-          category: 'Customs & Clearance',
-          stage: 'Destination',
-          chargeName: 'Import Customs Entry & Clearance',
-          amount: 280,
-          notes: 'Import customs duty calculation, HTS classification & EDI entry processing',
-        },
-        {
-          category: 'Destination Handling',
-          stage: 'Destination',
-          chargeName: 'Terminal Handling Charge (DTHC)',
-          amount: 310,
-          notes: 'Port terminal crane discharge, vessel unloading & container yard handling',
-        },
-        {
-          category: 'Customs & Clearance',
-          stage: 'Destination',
-          chargeName: 'Delivery Order (DO) Fee',
-          amount: 85,
-          notes: 'Carrier release order generation and administrative documentation charge',
-        },
-      ];
-
-    case 'destination_delivery':
-      return [
-        {
-          category: 'First Mile / Transport',
-          stage: 'Destination',
-          chargeName: 'Last-Mile Delivery / Drayage',
-          amount: 240,
-          notes: 'Transport from destination port/CFS to consignee warehouse door',
-        },
-        {
-          category: 'Packaging & Warehousing',
-          stage: 'Destination',
-          chargeName: 'Container De-stuffing & Return',
-          amount: 120,
-          notes: 'Unloading cargo at warehouse bay and empty container depot interchange return',
-        },
-      ];
+      break;
 
     default:
-      return [
-        {
-          category: 'Handling & Logistics',
-          stage: stageCategory,
-          chargeName: 'Operational Handling Fee',
-          amount: 100,
-          notes: 'Standard operational handling and administrative fee for stage execution',
-        },
-      ];
+      charges = [];
   }
+
+  return charges.filter((c) => !c.applicableScopes || c.applicableScopes.includes(serviceScope));
 };
+
 
 export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
   formData,
@@ -193,24 +132,6 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
   const safeGrossWeight = explicitGross > 0 ? explicitGross : totalNetCargoWeight;
   const safeVolumetricWeight = Number(volumetricWeight) || 0;
 
-  // Stages & Filtering logic matching route planning
-  const stages = generateShipmentRouteLifecycle({
-    transportMode: formData.mode === 'Air' ? 'Air' : 'Ship',
-    serviceType:
-      formData.service_scope === 'D2D'
-        ? 'Door-to-Door'
-        : formData.service_scope === 'P2P'
-        ? 'Port-to-Port'
-        : formData.service_scope === 'D2P'
-        ? 'Door-to-Port'
-        : 'Port-to-Door',
-    originPortOrCity: formData.origin_port_name || formData.from_port_name || 'Origin Location',
-    destinationPortOrCity: formData.destination_port_name || formData.to_port_name || 'Destination Location',
-    isHazmat: Boolean(formData.hazardous_materials),
-    isReefer: Boolean(formData.temperature_control_required),
-    incoterm: formData.incoterm || 'DDP',
-  });
-
   const [expandedStageIds, setExpandedStageIds] = useState<string[]>([]);
   const [filterCategory, setFilterCategory] = useState<'All' | 'Origin' | 'Main Freight' | 'Destination'>('All');
 
@@ -220,8 +141,35 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
     );
   };
 
+  const summaryStages = [
+    {
+      id: 'origin',
+      title: 'Origin Charges',
+      subtitle: 'Pickup, Handling, Port & Export Customs',
+      category: 'Origin',
+      iconType: 'truck' as const,
+      stageNumber: 1,
+    },
+    {
+      id: 'freight',
+      title: 'Freight & Transit',
+      subtitle: 'International Freight & Carrier Surcharges',
+      category: 'Main Freight',
+      iconType: 'ship' as const,
+      stageNumber: 2,
+    },
+    {
+      id: 'destination',
+      title: 'Destination Charges',
+      subtitle: 'Import Customs, Port & Final Delivery',
+      category: 'Destination',
+      iconType: 'delivery' as const,
+      stageNumber: 3,
+    }
+  ];
+
   const filteredStages =
-    filterCategory === 'All' ? stages : stages.filter((s) => s.category === filterCategory);
+    filterCategory === 'All' ? summaryStages : summaryStages.filter((s) => s.category === filterCategory);
 
   const getStageIcon = (type: RouteStage['iconType']) => {
     switch (type) {
@@ -244,7 +192,7 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
   };
 
   return (
-    <Card className="summary-sidebar-card shadow-md">
+    <Card className="summary-sidebar-card shadow-md" style={{ display: 'flex', flexDirection: 'column' }}>
       {/* 1. Card Header */}
       <div className="sidebar-header">
         <div className="header-status-dot pulse"></div>
@@ -300,11 +248,11 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
       </div>
 
       {/* 4. Vertical Interactive Timeline Stages Focus Solely on High-UX Charge Cards */}
-      <div className="vertical-timeline-container">
+      <div className="vertical-timeline-container" style={{ flex: 1, paddingRight: '0.25rem', marginTop: '0.5rem' }}>
         {filteredStages.map((stage, idx) => {
           const isExpanded = expandedStageIds.includes(stage.id);
           const isLast = idx === filteredStages.length - 1;
-          const stageCharges = getStageCharges(stage.id, stage.category, formData.mode);
+          const stageCharges = getStageCharges(stage.id, formData.mode, formData.service_scope || 'D2D');
           const totalStageAmount = stageCharges.reduce((sum, c) => sum + c.amount, 0);
 
           return (
@@ -362,28 +310,45 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#1e293b', fontWeight: 800, fontSize: '0.78rem' }}>
                           <Receipt size={14} style={{ color: '#2563eb' }} /> Stage Charges Breakdown
                         </span>
-                        <span style={{ fontSize: '0.725rem', color: '#059669', fontWeight: 800, background: '#ecfdf5', padding: '0.15rem 0.45rem', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
-                          {currencySymbol}{totalStageAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total
-                        </span>
                       </div>
 
-                      {/* Card List View (100% Fit Width) */}
+                      {/* Card List View Grouped By Category */}
                       <div className="charge-cards-list">
-                        {stageCharges.map((charge, cIdx) => (
-                          <div key={cIdx} className="charge-item-card">
-                            <div className="charge-card-header">
-                              <div className="charge-name-title">{charge.chargeName}</div>
-                              <div className="charge-amount-tag">
-                                {currencySymbol}{charge.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </div>
+                        {Array.from(new Set(stageCharges.map(c => c.category))).map(category => (
+                          <div key={category} className="charge-category-group" style={{ 
+                            marginBottom: '1rem',
+                            background: '#f8fafc',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0',
+                            overflow: 'hidden',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                          }}>
+                            <div className="category-group-header" style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              color: '#1e40af',
+                              backgroundColor: '#dbeafe',
+                              padding: '0.45rem 0.75rem',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                              borderBottom: '1px solid #bfdbfe'
+                            }}>
+                              <div style={{ width: '4px', height: '12px', background: '#3b82f6', borderRadius: '4px', marginRight: '8px' }}></div>
+                              {category}
                             </div>
-
-                            <div className="charge-card-meta">
-                              <span className="charge-cat-pill">{charge.category}</span>
-                              <span className="stage-green-pill">{charge.stage}</span>
+                            
+                            <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                              {stageCharges.filter(c => c.category === category).map((charge, cIdx) => (
+                                <div key={cIdx} className="charge-item-card" style={{ margin: 0, border: '1px solid #e2e8f0', background: '#ffffff' }}>
+                                  <div className="charge-card-header">
+                                    <div className="charge-name-title">{charge.chargeName}</div>
+                                  </div>
+                                  <div className="charge-notes-text" style={{ marginTop: '0.25rem' }}>{charge.notes}</div>
+                                </div>
+                              ))}
                             </div>
-
-                            <div className="charge-notes-text">{charge.notes}</div>
                           </div>
                         ))}
                       </div>

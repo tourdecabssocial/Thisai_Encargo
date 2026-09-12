@@ -59,6 +59,26 @@
   position: sticky;
   top: 1.5rem;
   width: 100%;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  scrollbar-width: thin; /* For Firefox */
+}
+
+/* Custom Scrollbar for sidebars */
+.rfq-left-pane::-webkit-scrollbar,
+.rfq-sidebar-pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rfq-left-pane::-webkit-scrollbar-track,
+.rfq-sidebar-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rfq-left-pane::-webkit-scrollbar-thumb,
+.rfq-sidebar-pane::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
 }
 
 @media (max-width: 1280px) {
