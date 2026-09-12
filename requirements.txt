@@ -1,0 +1,21 @@
+# SmartRFQ Application Requirements & Dependency Manifest
+# Framework: React 19 + TypeScript + Vite 8
+# Required Runtime: Node.js >= 18.0.0, npm >= 9.0.0
+
+# Production Package Dependencies (see package.json):
+# react >= 19.2.8
+# react-dom >= 19.2.8
+# lucide-react >= 1.39.0
+
+# Development Tools & Compilers:
+# vite >= 8.2.2
+# typescript >= 6.0.2
+# @vitejs/plugin-react >= 6.1.0
+# oxlint >= 1.79.0
+
+# Required Environment Keys (configure in .env - see .env.example):
+# - VITE_GEMINI_API_KEY
+# - GEMINI_API_KEY
+# - VITE_REEF_KEY
+# - VITE_MEILISEARCH_HOST
+# - VITE_MEILISEARCH_API_KEY

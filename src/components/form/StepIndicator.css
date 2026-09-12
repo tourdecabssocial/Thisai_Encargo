@@ -1,0 +1,123 @@
+.step-indicator-wrapper {
+  position: relative;
+  margin-bottom: 2rem;
+  padding: 0 0.5rem;
+}
+
+.step-indicator-track {
+  position: absolute;
+  top: 22px;
+  left: 8%;
+  right: 8%;
+  height: 4px;
+  background: #e2e8f0;
+  z-index: 1;
+  border-radius: var(--radius-full);
+}
+
+.step-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+  border-radius: var(--radius-full);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+}
+
+.steps-container {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.step-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.step-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.step-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.step-subtitle {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Active State */
+.step-item.active .step-icon-box {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(37, 99, 235, 0.35);
+  transform: scale(1.12);
+}
+
+.step-item.active .step-title {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.step-item.active .step-subtitle {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Completed State */
+.step-item.completed .step-icon-box {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+}
+
+.step-item.completed .step-title {
+  color: #15803d;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .step-subtitle {
+    display: none;
+  }
+  .step-title {
+    font-size: 0.75rem;
+  }
+  .step-icon-box {
+    width: 38px;
+    height: 38px;
+  }
+  .step-indicator-track {
+    top: 19px;
+  }
+}

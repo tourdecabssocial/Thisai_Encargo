@@ -1,0 +1,33 @@
+.app-footer {
+  margin-top: auto;
+  border-top: 1px solid #e2e8f0;
+  padding: 1.5rem 0;
+  background: #ffffff;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.footer-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.text-success {
+  color: #059669;
+}
+
+@media (max-width: 640px) {
+  .footer-container {
+    flex-direction: column;
+    text-align: center;
+  }
+}

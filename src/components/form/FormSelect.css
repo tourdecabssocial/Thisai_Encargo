@@ -1,0 +1,57 @@
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.725rem 2.6rem 0.725rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.925rem;
+  font-weight: 500;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.field-select.has-icon {
+  padding-left: 2.7rem;
+}
+
+.field-select:hover {
+  border-color: #94a3b8;
+}
+
+.field-select:focus {
+  background: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.select-arrow {
+  position: absolute;
+  right: 0.9rem;
+  color: #64748b;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.select-wrapper:focus-within .select-arrow {
+  color: #2563eb;
+}
+
+.select-option {
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0.6rem;
+}

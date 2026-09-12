@@ -1,0 +1,80 @@
+.step1-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.section-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.scope-rich-card:hover {
+  border-color: #93c5fd !important;
+  transform: translateY(-1px);
+}
+
+.scope-rich-card.selected:hover {
+  border-color: #2563eb !important;
+}
+
+.route-locations-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.locations-grid {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.location-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.location-box-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0891b2;
+}
+
+.route-arrow {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .scope-rich-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .locations-grid {
+    flex-direction: column;
+  }
+  .grid-3col {
+    grid-template-columns: 1fr;
+  }
+}
