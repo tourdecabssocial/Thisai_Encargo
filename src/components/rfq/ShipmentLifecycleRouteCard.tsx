@@ -206,6 +206,13 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
                             </div>
                             <div className="document-desc">
                               <strong>Issuer:</strong> {doc.issuer} — {doc.description}
+                              {doc.bullets && doc.bullets.length > 0 && (
+                                <ul className="doc-bullet-list" style={{ marginTop: '8px', paddingLeft: '20px', listStyleType: 'disc', color: '#4b5563' }}>
+                                  {doc.bullets.map((bullet, bIdx) => (
+                                    <li key={bIdx} style={{ marginBottom: '4px' }}>{bullet}</li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
                           </div>
                         ))}

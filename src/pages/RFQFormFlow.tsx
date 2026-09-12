@@ -85,6 +85,7 @@ export const RFQFormFlow: React.FC = () => {
               isHazmat: Boolean(formData.hazardous_materials),
               isReefer: Boolean(formData.temperature_control_required),
               incoterm: formData.incoterm || 'DDP',
+              hsCode: formData.hs_code || (formData as any).hsCode || '',
             }}
           />
         </aside>
