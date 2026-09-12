@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { RFQFormData, ServiceScope, ShipmentType } from '../../types/rfq';
 import { FormSelect } from '../form/FormSelect';
 import { FormInput } from '../form/FormInput';
 import { PortAutocomplete } from '../form/PortAutocomplete';
 import { mockAddresses } from '../../hooks/useRFQForm';
+import { findPortsFromAddress, type PortRecord } from '../../services/portSearchService';
 import {
   Plane,
   Ship,
@@ -17,6 +18,9 @@ import {
   ArrowDownLeft,
   CheckCircle2,
   FileCheck,
+  Compass,
+  Edit3,
+  ListFilter,
 } from 'lucide-react';
 import { getMinReadyDate, getMinDeliveryDate, SCOPE_INCOTERMS_MAP } from '../../utils/rfqConstants';
 import './Step1RouteScope.css';
@@ -45,6 +49,60 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
   const toError = errors.to_address_id || errors.to_port_code || errors.to_address;
 
   const allowedIncoterms = SCOPE_INCOTERMS_MAP[formData.service_scope] || ['FOB', 'EXW', 'CIF', 'DDP'];
+
+  // Manual Address Input Mode toggles
+  const [isManualFrom, setIsManualFrom] = useState(false);
+  const [manualFromText, setManualFromText] = useState('12 GST Road, Guindy, Chennai, Tamil Nadu, India');
+  
+  const [isManualTo, setIsManualTo] = useState(false);
+  const [manualToText, setManualToText] = useState('450 7th Ave, New York, NY 10123, United States');
+
+  // Address Details & UN/LOCODE CSV Ports Matching
+  const fromAddrObj = formData.from_address || mockAddresses.find((a) => a.id === formData.from_address_id) || mockAddresses[0];
+  const toAddrObj = formData.to_address || mockAddresses.find((a) => a.id === formData.to_address_id) || mockAddresses[1];
+
+  const originInput = isManualFrom ? manualFromText : (fromAddrObj as any);
+  const destInput = isManualTo ? manualToText : (toAddrObj as any);
+
+  const originCityPorts: PortRecord[] = findPortsFromAddress(originInput, formData.mode);
+  const destCityPorts: PortRecord[] = findPortsFromAddress(destInput, formData.mode);
+
+  const originLocationLabel = isManualFrom
+    ? (manualFromText.split(',')[manualFromText.split(',').length - 2] || manualFromText || 'Origin City').trim()
+    : (fromAddrObj?.city || 'Chennai');
+
+  const destLocationLabel = isManualTo
+    ? (manualToText.split(',')[manualToText.split(',').length - 2] || manualToText || 'Destination City').trim()
+    : (toAddrObj?.city || 'New York');
+
+  // Auto-sync origin & destination gateway ports when address, city, or mode changes
+  useEffect(() => {
+    if (isFromAddress && originCityPorts.length > 0) {
+      const currentVal = formData.from_port_code || formData.origin_port_code;
+      const matchesCurrent = originCityPorts.some((p) => p.unlocode === currentVal);
+      if (!currentVal || !matchesCurrent) {
+        const defaultPort = originCityPorts[0];
+        onSetFieldValue('from_port_code', defaultPort.unlocode);
+        onSetFieldValue('from_port_name', defaultPort.port_name);
+        onSetFieldValue('origin_port_code', defaultPort.unlocode);
+        onSetFieldValue('origin_port_name', defaultPort.port_name);
+      }
+    }
+  }, [formData.from_address_id, manualFromText, isManualFrom, formData.mode, formData.service_scope]);
+
+  useEffect(() => {
+    if (isToAddress && destCityPorts.length > 0) {
+      const currentVal = formData.to_port_code || formData.destination_port_code;
+      const matchesCurrent = destCityPorts.some((p) => p.unlocode === currentVal);
+      if (!currentVal || !matchesCurrent) {
+        const defaultPort = destCityPorts[0];
+        onSetFieldValue('to_port_code', defaultPort.unlocode);
+        onSetFieldValue('to_port_name', defaultPort.port_name);
+        onSetFieldValue('destination_port_code', defaultPort.unlocode);
+        onSetFieldValue('destination_port_name', defaultPort.port_name);
+      }
+    }
+  }, [formData.to_address_id, manualToText, isManualTo, formData.mode, formData.service_scope]);
 
   const scopeOptions: { code: ServiceScope; title: string; desc: string; badge: string; icon: React.ReactNode }[] = [
     {
@@ -260,27 +318,101 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
       {/* 2. From & To Dynamic Origin & Destination Locations */}
       <div className="section-card" style={{ marginTop: '0.75rem' }}>
         <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.90rem' }}>
-          <ArrowRightLeft size={16} className="text-indigo" /> 2. Origin (From) & Destination (To)
+          <ArrowRightLeft size={16} className="text-indigo" /> 2. Origin (From) & Destination (To) Locations
         </h3>
 
         <div className="grid-2col" style={{ gap: '0.75rem' }}>
           {/* FROM Field */}
-          <div className="form-field">
+          <div className="form-field" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {isFromAddress ? (
-              <FormSelect
-                label="From (Origin Pickup Address) *"
-                name="from_address_id"
-                value={formData.from_address_id || ''}
-                onChange={(e) => {
-                  const addr = mockAddresses.find((a) => a.id === e.target.value);
-                  onSetFieldValue('from_address_id', e.target.value);
-                  onSetFieldValue('from_address', addr || null);
-                  if (addr?.countryCode) onSetFieldValue('originCountry', addr.countryCode);
-                }}
-                options={mockAddresses.map((a) => ({ value: a.id, label: `${a.label} (${a.city}, ${a.country})` }))}
-                error={fromError}
-                icon={<MapPin size={15} />}
-              />
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label className="field-label" style={{ fontWeight: 600, fontSize: '0.82rem', margin: 0 }}>
+                    From (Origin Pickup Address) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualFrom(!isManualFrom)}
+                    style={{
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      color: '#2563eb',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                    }}
+                  >
+                    {isManualFrom ? <ListFilter size={12} /> : <Edit3 size={12} />}
+                    {isManualFrom ? 'Use Saved Address' : 'Enter Address Manually'}
+                  </button>
+                </div>
+
+                {isManualFrom ? (
+                  <FormInput
+                    label=""
+                    name="custom_from_address"
+                    value={manualFromText}
+                    onChange={(e) => setManualFromText(e.target.value)}
+                    placeholder="Enter manual street, city, state, country..."
+                    icon={<MapPin size={15} />}
+                  />
+                ) : (
+                  <FormSelect
+                    label=""
+                    name="from_address_id"
+                    value={formData.from_address_id || ''}
+                    onChange={(e) => {
+                      const addr = mockAddresses.find((a) => a.id === e.target.value);
+                      onSetFieldValue('from_address_id', e.target.value);
+                      onSetFieldValue('from_address', addr || null);
+                      if (addr?.countryCode) onSetFieldValue('originCountry', addr.countryCode);
+                    }}
+                    options={mockAddresses.map((a) => ({ value: a.id, label: `${a.label} (${a.city}, ${a.country})` }))}
+                    error={fromError}
+                    icon={<MapPin size={15} />}
+                  />
+                )}
+
+                {/* Ports by City Feature: Display UN/LOCODE Ports dynamically resolved from CSV dataset */}
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '0.55rem 0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Compass size={14} className="text-sky-600" />
+                      Origin Port for {originLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
+                    </label>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                      UN/LOCODE CSV Dataset
+                    </span>
+                  </div>
+
+                  <FormSelect
+                    label=""
+                    name="from_port_code"
+                    value={formData.from_port_code || (originCityPorts[0]?.unlocode || '')}
+                    onChange={(e) => {
+                      const selected = originCityPorts.find((p) => p.unlocode === e.target.value);
+                      const portName = selected ? selected.port_name : e.target.value;
+                      onSetFieldValue('from_port_code', e.target.value);
+                      onSetFieldValue('from_port_name', portName);
+                      onSetFieldValue('origin_port_code', e.target.value);
+                      onSetFieldValue('origin_port_name', portName);
+                    }}
+                    options={originCityPorts.map((p) => ({
+                      value: p.unlocode,
+                      label: `${p.port_name} [${p.unlocode}]`,
+                    }))}
+                    icon={formData.mode === 'Air' ? <Plane size={14} /> : <Anchor size={14} />}
+                  />
+
+                  <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 600, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <CheckCircle2 size={12} style={{ color: '#0284c7' }} />
+                    Auto-matched {originCityPorts.length} UN/LOCODE gateway port{originCityPorts.length > 1 ? 's' : ''} from CSV dataset for {originLocationLabel}
+                  </div>
+                </div>
+              </>
             ) : (
               <PortAutocomplete
                 label="From (Origin Port) *"
@@ -301,22 +433,96 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
           </div>
 
           {/* TO Field */}
-          <div className="form-field">
+          <div className="form-field" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {isToAddress ? (
-              <FormSelect
-                label="To (Destination Delivery Address) *"
-                name="to_address_id"
-                value={formData.to_address_id || ''}
-                onChange={(e) => {
-                  const addr = mockAddresses.find((a) => a.id === e.target.value);
-                  onSetFieldValue('to_address_id', e.target.value);
-                  onSetFieldValue('to_address', addr || null);
-                  if (addr?.countryCode) onSetFieldValue('destCountry', addr.countryCode);
-                }}
-                options={mockAddresses.map((a) => ({ value: a.id, label: `${a.label} (${a.city}, ${a.country})` }))}
-                error={toError}
-                icon={<MapPin size={15} />}
-              />
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label className="field-label" style={{ fontWeight: 600, fontSize: '0.82rem', margin: 0 }}>
+                    To (Destination Delivery Address) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualTo(!isManualTo)}
+                    style={{
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      color: '#2563eb',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.2rem',
+                    }}
+                  >
+                    {isManualTo ? <ListFilter size={12} /> : <Edit3 size={12} />}
+                    {isManualTo ? 'Use Saved Address' : 'Enter Address Manually'}
+                  </button>
+                </div>
+
+                {isManualTo ? (
+                  <FormInput
+                    label=""
+                    name="custom_to_address"
+                    value={manualToText}
+                    onChange={(e) => setManualToText(e.target.value)}
+                    placeholder="Enter manual street, city, state, country..."
+                    icon={<MapPin size={15} />}
+                  />
+                ) : (
+                  <FormSelect
+                    label=""
+                    name="to_address_id"
+                    value={formData.to_address_id || ''}
+                    onChange={(e) => {
+                      const addr = mockAddresses.find((a) => a.id === e.target.value);
+                      onSetFieldValue('to_address_id', e.target.value);
+                      onSetFieldValue('to_address', addr || null);
+                      if (addr?.countryCode) onSetFieldValue('destCountry', addr.countryCode);
+                    }}
+                    options={mockAddresses.map((a) => ({ value: a.id, label: `${a.label} (${a.city}, ${a.country})` }))}
+                    error={toError}
+                    icon={<MapPin size={15} />}
+                  />
+                )}
+
+                {/* Ports by City Feature: Display UN/LOCODE Ports dynamically resolved from CSV dataset */}
+                <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '0.55rem 0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                    <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Compass size={14} className="text-sky-600" />
+                      Destination Port for {destLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
+                    </label>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                      UN/LOCODE CSV Dataset
+                    </span>
+                  </div>
+
+                  <FormSelect
+                    label=""
+                    name="to_port_code"
+                    value={formData.to_port_code || (destCityPorts[0]?.unlocode || '')}
+                    onChange={(e) => {
+                      const selected = destCityPorts.find((p) => p.unlocode === e.target.value);
+                      const portName = selected ? selected.port_name : e.target.value;
+                      onSetFieldValue('to_port_code', e.target.value);
+                      onSetFieldValue('to_port_name', portName);
+                      onSetFieldValue('destination_port_code', e.target.value);
+                      onSetFieldValue('destination_port_name', portName);
+                    }}
+                    options={destCityPorts.map((p) => ({
+                      value: p.unlocode,
+                      label: `${p.port_name} [${p.unlocode}]`,
+                    }))}
+                    icon={formData.mode === 'Air' ? <Plane size={14} /> : <Anchor size={14} />}
+                  />
+
+                  <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 600, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <CheckCircle2 size={12} style={{ color: '#0284c7' }} />
+                    Auto-matched {destCityPorts.length} UN/LOCODE gateway port{destCityPorts.length > 1 ? 's' : ''} from CSV dataset for {destLocationLabel}
+                  </div>
+                </div>
+              </>
             ) : (
               <PortAutocomplete
                 label="To (Destination Port) *"

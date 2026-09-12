@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRFQForm } from '../hooks/useRFQForm';
+import { useRFQForm, mockAddresses } from '../hooks/useRFQForm';
 import { StepIndicator } from '../components/form/StepIndicator';
 import { ShipmentFlowVisualizer } from '../components/rfq/ShipmentFlowVisualizer';
 import { Step1RouteScope } from '../components/rfq/Step1RouteScope';
@@ -39,6 +39,29 @@ export const RFQFormFlow: React.FC = () => {
     return <RFQSubmissionReport record={submittedRecord} onReset={resetForm} />;
   }
 
+  // Dynamic Selected Address & Port Labels Resolution for Flow Diagrams & Cards
+  const getAddressLabel = (addrObj: any, addrId: string) => {
+    if (addrObj) {
+      if (typeof addrObj === 'string') return addrObj;
+      if (addrObj.label) return addrObj.label;
+      if (addrObj.city) return `${addrObj.city}, ${addrObj.countryCode || addrObj.country || ''}`;
+    }
+    const found = mockAddresses.find((a) => a.id === addrId);
+    if (found) return `${found.label} (${found.city})`;
+    return '';
+  };
+
+  const fromAddrLabel = getAddressLabel(formData.from_address, formData.from_address_id) || 'Origin Address';
+  const toAddrLabel = getAddressLabel(formData.to_address, formData.to_address_id) || 'Destination Address';
+  const originPortLabel =
+    formData.origin_port_name ||
+    formData.from_port_name ||
+    (formData.from_port_code ? `${formData.from_port_code} Port` : 'Origin Port');
+  const destPortLabel =
+    formData.destination_port_name ||
+    formData.to_port_name ||
+    (formData.to_port_code ? `${formData.to_port_code} Port` : 'Destination Port');
+
   return (
     <div className="rfq-flow-page animate-fade-in">
       <div className="rfq-flow-header">
@@ -60,8 +83,10 @@ export const RFQFormFlow: React.FC = () => {
       <ShipmentFlowVisualizer
         mode={formData.mode}
         serviceScope={formData.service_scope}
-        originName={formData.origin_port_name || formData.from_port_name}
-        destName={formData.destination_port_name || formData.to_port_name}
+        fromAddress={fromAddrLabel}
+        toAddress={toAddrLabel}
+        originName={originPortLabel}
+        destName={destPortLabel}
         currentStep={activeStep}
       />
 
@@ -80,8 +105,8 @@ export const RFQFormFlow: React.FC = () => {
                   : formData.service_scope === 'D2P'
                   ? 'Door-to-Port'
                   : 'Port-to-Door',
-              originPortOrCity: formData.origin_port_name || formData.from_port_name || 'Origin Location',
-              destinationPortOrCity: formData.destination_port_name || formData.to_port_name || 'Destination Location',
+              originPortOrCity: fromAddrLabel || originPortLabel,
+              destinationPortOrCity: toAddrLabel || destPortLabel,
               isHazmat: Boolean(formData.hazardous_materials),
               isReefer: Boolean(formData.temperature_control_required),
               incoterm: formData.incoterm || 'DDP',
@@ -159,23 +184,21 @@ export const RFQFormFlow: React.FC = () => {
                 variant="primary"
                 onClick={handleSubmit}
                 isLoading={isSubmitting}
-                rightIcon={<Send size={18} />}
+                leftIcon={<Send size={18} />}
               >
-                Submit Request for Quote
+                Submit RFQ Request
               </Button>
             )}
           </div>
         </form>
 
-        {/* Live Calculation Sidebar */}
-        <aside className="rfq-sidebar-pane">
+        {/* Right Sticky Sidebar Pane: Live RFQ Summary */}
+        <aside className="rfq-right-pane">
           <RFQSummarySidebar
             formData={formData}
             totalVolumeCbm={totalVolumeCbm}
             totalGrossWeightKg={totalGrossWeightKg}
             volumetricWeight={volumetricWeight}
-            hasDocumentsAttached={hasDocumentsAttached}
-            itemReconciliationPassed={itemReconciliation.passed}
           />
         </aside>
       </div>

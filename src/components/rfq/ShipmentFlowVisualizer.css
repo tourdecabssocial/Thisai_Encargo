@@ -1,13 +1,13 @@
 .shipment-visual-flow-card.node-flow-style.fit-width {
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  margin-bottom: 1.1rem;
-  box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.04);
+  border-radius: 14px;
+  padding: 0.95rem 1.15rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.75rem;
   transition: all 0.25s ease;
   width: 100%;
   box-sizing: border-box;
@@ -18,8 +18,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  border-bottom: 1px stroke #f1f5f9;
-  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.5rem;
 }
 
 .flow-header-title-group {
@@ -32,20 +32,37 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 800;
-  color: #2563eb;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  background: #dbeafe;
-  border: 1px solid #bfdbfe;
-  padding: 0.1rem 0.45rem;
+  padding: 0.12rem 0.55rem;
   border-radius: 10px;
   width: fit-content;
 }
 
+.flow-badge.ocean-badge {
+  color: #0284c7;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+}
+
+.flow-badge.air-badge {
+  color: #4f46e5;
+  background: #e0e7ff;
+  border: 1px solid #c7d2fe;
+}
+
+.pulse-icon {
+  animation: airPulse 2s infinite ease-in-out;
+}
+
+.bobbing-icon {
+  animation: seaBobbing 2.5s infinite ease-in-out;
+}
+
 .flow-title {
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.015em;
@@ -58,9 +75,9 @@
   gap: 0.35rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  padding: 0.2rem 0.55rem;
+  padding: 0.25rem 0.65rem;
   border-radius: 6px;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
 }
 
 .scope-label {
@@ -73,25 +90,216 @@
   font-weight: 800;
 }
 
-/* 100% Fit-Width Point-to-Point Chain Wrapper (NO HORIZONTAL SCROLLBAR) */
+/* 100% Fit-Width Point-to-Point Chain Wrapper */
 .point-to-point-flow-wrapper.fit-width {
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.75rem 0.5rem;
+  position: relative;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.1rem 0.95rem;
   width: 100%;
   box-sizing: border-box;
-  overflow: hidden; /* Zero horizontal scrollbar */
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 🌊 REALISTIC OCEAN WATER SEA BACKGROUND */
+.point-to-point-flow-wrapper.sea-background {
+  background: linear-gradient(180deg, #f0f9ff 0%, #bae6fd 50%, #0284c7 100%);
+  border-color: #38bdf8;
+  box-shadow: inset 0 0 25px rgba(2, 132, 199, 0.15);
+}
+
+/* ☁️ VIBRANT HIGH-SKY & CLOUDS BACKGROUND */
+.point-to-point-flow-wrapper.sky-background {
+  background: linear-gradient(180deg, #38bdf8 0%, #7dd3fc 45%, #e0f2fe 100%);
+  border-color: #7dd3fc;
+  box-shadow: inset 0 0 25px rgba(56, 189, 248, 0.2);
+}
+
+/* Animated Background Ambience Container */
+.flow-ambience-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* ☁️ SKY & DRIFTING CLOUDS STYLING */
+.sky-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.sky-sun-glow {
+  position: absolute;
+  top: 8px;
+  right: 25px;
+  color: #fde047;
+  filter: drop-shadow(0 0 12px #facc15);
+  animation: sunGlow 4s infinite ease-in-out alternate;
+}
+
+@keyframes sunGlow {
+  0% { transform: scale(1) rotate(0deg); opacity: 0.85; }
+  100% { transform: scale(1.12) rotate(15deg); opacity: 1; }
+}
+
+.drifting-clouds-group {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cloud-wrapper {
+  position: absolute;
+  pointer-events: none;
+}
+
+.cloud-icon {
+  color: #ffffff;
+  fill: #ffffff;
+  filter: drop-shadow(0 6px 14px rgba(15, 23, 42, 0.18));
+}
+
+.cloud-1 {
+  top: 6%;
+  left: -10%;
+  animation: driftCloud 18s linear infinite;
+}
+
+.cloud-2 {
+  top: 35%;
+  left: -20%;
+  animation: driftCloud 24s linear infinite 5s;
+}
+
+.cloud-3 {
+  top: 12%;
+  left: -15%;
+  animation: driftCloud 15s linear infinite 2s;
+}
+
+.cloud-4 {
+  bottom: 10%;
+  left: -12%;
+  animation: driftCloud 22s linear infinite 8s;
+}
+
+.cloud-5 {
+  top: 25%;
+  left: -18%;
+  animation: driftCloud 19s linear infinite 12s;
+}
+
+@keyframes driftCloud {
+  0% { left: -15%; transform: translateY(0) scale(0.9); opacity: 0.7; }
+  25% { opacity: 0.95; transform: translateY(-4px) scale(1); }
+  75% { opacity: 0.95; transform: translateY(3px) scale(1.05); }
+  100% { left: 110%; transform: translateY(0) scale(0.9); opacity: 0.7; }
+}
+
+/* 🌊 REALISTIC ROLLING OCEAN SEA WATER STYLING */
+.sea-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.sea-compass-icon {
+  position: absolute;
+  top: 8px;
+  right: 20px;
+  color: #ffffff;
+  opacity: 0.45;
+  filter: drop-shadow(0 2px 4px rgba(2, 132, 199, 0.3));
+}
+
+.ocean-waves-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.sea-wave-svg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 45px;
+}
+
+.wave-layer-1 {
+  fill: rgba(3, 105, 161, 0.45);
+  animation: waveSlide 8s linear infinite;
+}
+
+.wave-layer-2 {
+  fill: rgba(2, 132, 199, 0.35);
+  animation: waveSlide 12s linear infinite reverse;
+  bottom: -4px;
+}
+
+.wave-layer-3 {
+  fill: rgba(56, 189, 248, 0.25);
+  animation: waveSlide 16s linear infinite;
+  bottom: -8px;
+}
+
+@keyframes waveSlide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.sea-foam-particles {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  width: 100%;
+  height: 25px;
+  pointer-events: none;
+}
+
+.foam-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+  animation: seaFoamRise 3.5s infinite ease-out;
+}
+
+.f1 { left: 18%; animation-delay: 0s; }
+.f2 { left: 42%; animation-delay: 1.2s; }
+.f3 { left: 68%; animation-delay: 0.6s; }
+.f4 { left: 88%; animation-delay: 1.8s; }
+
+@keyframes seaFoamRise {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  50% { opacity: 0.8; transform: translateY(-10px) scale(1); }
+  100% { transform: translateY(-20px) scale(1.4); opacity: 0; }
 }
 
 .flow-chain-container.fit-width {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.15rem;
+  gap: 0.2rem;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  position: relative;
+  z-index: 2;
 }
 
 /* 📍 ROUTE POINT NODE */
@@ -99,14 +307,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
   flex: 0 0 auto;
   transition: all 0.25s ease;
+  position: relative;
 }
 
 .route-point-node.fit.muted {
-  opacity: 0.35;
-  filter: grayscale(85%);
+  opacity: 0.4;
+  filter: grayscale(70%);
 }
 
 .route-point-node.fit.active {
@@ -114,31 +323,83 @@
 }
 
 .point-icon-box.compact {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: #ffffff;
-  border: 1.5px solid #cbd5e1;
+  border: 1.8px solid #cbd5e1;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #1e293b;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
-  transition: all 0.2s ease;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+  transition: all 0.25s ease;
 }
 
 .route-point-node.fit.active .point-icon-box.compact {
   border-color: #2563eb;
   color: #2563eb;
-  background: #eff6ff;
+  background: #ffffff;
 }
 
 .route-point-node.fit.center-linehaul .point-icon-box.compact {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #2563eb;
   color: #ffffff;
   border-color: #1d4ed8;
-  transform: scale(1.08);
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+  transform: scale(1.1);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+}
+
+.ocean-mode .route-point-node.fit.center-linehaul .point-icon-box.compact {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border-color: #0284c7;
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.5);
+}
+
+.air-mode .route-point-node.fit.center-linehaul .point-icon-box.compact {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  border-color: #4f46e5;
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5);
+}
+
+.node-aura-pulse {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  animation: auraPulse 2.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+  pointer-events: none;
+}
+
+@keyframes auraPulse {
+  0% { transform: scale(0.95); opacity: 0.85; }
+  50% { transform: scale(1.25); opacity: 0; }
+  100% { transform: scale(0.95); opacity: 0; }
+}
+
+.node-icon.bob-ship {
+  animation: seaBobbing 2.5s infinite ease-in-out;
+}
+
+.node-icon.float-plane {
+  animation: airPulse 2s infinite ease-in-out;
+}
+
+@keyframes seaBobbing {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(3deg); }
+}
+
+@keyframes airPulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.1); }
 }
 
 .point-text-labels.compact {
@@ -150,20 +411,28 @@
 }
 
 .point-name {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: #0f172a;
   white-space: nowrap;
+  max-width: 105px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.85);
+  cursor: default;
 }
 
 .point-sub {
-  font-size: 0.58rem;
-  font-weight: 600;
-  color: #64748b;
+  font-size: 0.60rem;
+  font-weight: 700;
+  color: #334155;
   white-space: nowrap;
+  max-width: 105px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ↔️ FLOW CONNECTOR LEG */
+/* ↔️ FLOW CONNECTOR LEG WITH ANIMATED MOVING VEHICLES */
 .flow-connector-leg.fit {
   display: flex;
   flex-direction: column;
@@ -172,9 +441,9 @@
   flex: 1 1 auto;
   min-width: 0;
   position: relative;
-  gap: 0.15rem;
+  gap: 0.2rem;
   cursor: pointer;
-  padding: 0.1rem 0;
+  padding: 0.15rem 0;
   transition: all 0.2s ease;
 }
 
@@ -188,42 +457,140 @@
   align-items: center;
   justify-content: space-between;
   position: relative;
-  height: 10px;
+  height: 22px;
 }
 
 .flow-dashed-line {
+  position: relative;
   flex: 1;
-  height: 2px;
-  background: linear-gradient(90deg, #3b82f6 50%, transparent 50%);
-  background-size: 6px 2px;
+  height: 2.5px;
+  background: linear-gradient(90deg, #1d4ed8 50%, transparent 50%);
+  background-size: 7px 2.5px;
+  overflow: visible;
+}
+
+.air-mode .flow-dashed-line {
+  background: linear-gradient(90deg, #4338ca 50%, transparent 50%);
+  background-size: 7px 2.5px;
+}
+
+.flow-laser-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, #ffffff 50%, transparent 100%);
+  animation: laserPulse 2s infinite linear;
+}
+
+@keyframes laserPulse {
+  0% { left: -40%; opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { left: 100%; opacity: 0.2; }
 }
 
 .flow-connector-leg.fit.muted .flow-dashed-line {
   background: linear-gradient(90deg, #cbd5e1 50%, transparent 50%);
-  background-size: 6px 2px;
+  background-size: 7px 2.5px;
 }
 
 .flow-arrow-head {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 800;
-  color: #2563eb;
+  color: #1d4ed8;
   line-height: 1;
+}
+
+.air-mode .flow-arrow-head {
+  color: #4338ca;
 }
 
 .flow-connector-leg.fit.muted .flow-arrow-head {
   color: #cbd5e1;
 }
 
+/* 🚗 ✈️ 🚢 ANIMATED MOVING VEHICLES ALONG LEG LINES */
+.vehicle-traveler-container {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 22px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.animated-vehicle {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.animated-vehicle.truck-driving {
+  color: #1d4ed8;
+  filter: drop-shadow(0 2px 5px rgba(29, 78, 216, 0.4));
+  animation: driveTruck 3.5s infinite linear;
+}
+
+.animated-vehicle.clearance-scanning {
+  color: #047857;
+  filter: drop-shadow(0 2px 5px rgba(4, 120, 87, 0.4));
+  animation: scanClearance 3s infinite ease-in-out;
+}
+
+.animated-vehicle.ship-sailing {
+  color: #0284c7;
+  filter: drop-shadow(0 3px 8px rgba(2, 132, 199, 0.6));
+  animation: sailShip 5s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.animated-vehicle.plane-flying {
+  color: #4338ca;
+  filter: drop-shadow(0 4px 10px rgba(67, 56, 202, 0.6));
+  animation: flyPlane 3.8s infinite ease-in-out;
+}
+
+@keyframes driveTruck {
+  0% { left: 2%; opacity: 0; transform: translateY(-50%) scale(0.85); }
+  15% { opacity: 1; transform: translateY(-50%) scale(1.05); }
+  85% { opacity: 1; transform: translateY(-50%) scale(1.05); }
+  100% { left: 88%; opacity: 0; transform: translateY(-50%) scale(0.85); }
+}
+
+@keyframes scanClearance {
+  0% { left: 10%; opacity: 0; transform: translateY(-50%) scale(0.8); }
+  50% { left: 50%; opacity: 1; transform: translateY(-50%) scale(1.2); }
+  100% { left: 90%; opacity: 0; transform: translateY(-50%) scale(0.8); }
+}
+
+@keyframes sailShip {
+  0% { left: 2%; opacity: 0; transform: translateY(-50%) rotate(-4deg); }
+  20% { opacity: 1; transform: translateY(-70%) rotate(4deg); }
+  50% { transform: translateY(-30%) rotate(-3deg); }
+  80% { opacity: 1; transform: translateY(-70%) rotate(4deg); }
+  100% { left: 90%; opacity: 0; transform: translateY(-50%) rotate(-4deg); }
+}
+
+@keyframes flyPlane {
+  0% { left: -5%; opacity: 0; transform: translateY(-30%) rotate(5deg) scale(0.95); }
+  20% { opacity: 1; transform: translateY(-75%) rotate(9deg) scale(1.15); }
+  50% { transform: translateY(-35%) rotate(4deg) scale(1.2); }
+  80% { opacity: 1; transform: translateY(-75%) rotate(7deg) scale(1.15); }
+  100% { left: 92%; opacity: 0; transform: translateY(-30%) rotate(3deg) scale(0.95); }
+}
+
 .flow-label-badge.compact {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
   background: #ffffff;
   border: 1px solid #bfdbfe;
-  border-radius: 5px;
-  padding: 0.1rem 0.35rem;
-  font-size: 0.6rem;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  border-radius: 6px;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.65rem;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08);
   transition: all 0.2s ease;
   white-space: nowrap;
   max-width: 100%;
@@ -234,17 +601,17 @@
 .flow-connector-leg.fit.selected .flow-label-badge.compact {
   border-color: #2563eb;
   background: #eff6ff;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+  transform: translateY(-1.5px);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.18);
 }
 
 .flow-tag {
   font-weight: 800;
   color: #1d4ed8;
-  font-size: 0.55rem;
+  font-size: 0.58rem;
   background: #dbeafe;
-  padding: 0.05rem 0.2rem;
-  border-radius: 3px;
+  padding: 0.06rem 0.25rem;
+  border-radius: 4px;
 }
 
 .flow-text {
@@ -257,14 +624,14 @@
 /* Active Flow Leg Detail Box */
 .active-flow-detail-card {
   background: #f8fafc;
-  border: 1px stroke #93c5fd;
-  border-left: 4px stroke #2563eb;
-  border-radius: 8px;
-  padding: 0.55rem 0.75rem;
+  border: 1px solid #93c5fd;
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.72rem;
+  gap: 0.35rem;
+  font-size: 0.74rem;
 }
 
 .flow-detail-header {
@@ -276,28 +643,28 @@
 .detail-title-group {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .detail-badge {
   background: #2563eb;
   color: #ffffff;
   font-weight: 800;
-  font-size: 0.6rem;
-  padding: 0.1rem 0.35rem;
+  font-size: 0.62rem;
+  padding: 0.12rem 0.4rem;
   border-radius: 4px;
 }
 
 .detail-name {
   color: #0f172a;
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .close-detail-btn {
   background: none;
   border: none;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #64748b;
   cursor: pointer;
@@ -307,23 +674,23 @@
 .detail-desc {
   color: #334155;
   margin: 0;
-  font-size: 0.7rem;
-  line-height: 1.3;
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .detail-meta-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding-top: 0.2rem;
+  gap: 0.85rem;
+  padding-top: 0.25rem;
   border-top: 1px dashed #e2e8f0;
 }
 
 .meta-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.65rem;
+  gap: 0.28rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #475569;
 }

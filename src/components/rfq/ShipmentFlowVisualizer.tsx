@@ -1,5 +1,19 @@
 import React, { useState } from 'react';
-import { Ship, Plane, Home, Warehouse, Anchor, Clock, FileText, UserCheck } from 'lucide-react';
+import {
+  Ship,
+  Plane,
+  Truck,
+  Home,
+  Warehouse,
+  Anchor,
+  Clock,
+  FileText,
+  UserCheck,
+  ShieldCheck,
+  Cloud,
+  Sun,
+  Compass,
+} from 'lucide-react';
 import './ShipmentFlowVisualizer.css';
 
 interface ShipmentFlowVisualizerProps {
@@ -7,12 +21,16 @@ interface ShipmentFlowVisualizerProps {
   serviceScope?: 'D2D' | 'P2P' | 'D2P' | 'P2D' | string;
   originName?: string;
   destName?: string;
+  fromAddress?: string;
+  toAddress?: string;
+  currentStep?: number;
 }
 
 export interface RoutePoint {
   id: string;
   name: string;
   sub: string;
+  fullTitle?: string;
   type: 'home' | 'hub' | 'port' | 'linehaul' | 'dest_port' | 'dest_hub' | 'customer';
 }
 
@@ -25,11 +43,16 @@ export interface FlowConnector {
   stakeholder: string;
   estimatedTime: string;
   document: string;
+  vehicleType: 'truck' | 'clearance' | 'main_linehaul';
 }
 
 export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
   mode = 'Ocean',
   serviceScope = 'D2D',
+  originName,
+  destName,
+  fromAddress,
+  toAddress,
 }) => {
   const isAir = mode === 'Air';
   const scope = serviceScope || 'D2D';
@@ -39,80 +62,134 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
   const isOriginDoorActive = scope === 'D2D' || scope === 'D2P';
   const isDestDoorActive = scope === 'D2D' || scope === 'P2D';
 
-  // 7 Location Points (Nodes)
+  // Dynamic Selected Addresses & Ports Formatted Labels
+  const displayFromAddr = fromAddress || 'Origin Pickup Address';
+  const displayToAddr = toAddress || 'Destination Delivery Door';
+  const displayOriginPort = originName || (isAir ? 'Origin POL Airport' : 'Origin POL Sea Port');
+  const displayDestPort = destName || (isAir ? 'Dest POD Airport' : 'Dest POD Sea Port');
+
+  // 7 Location Points (Nodes) with Selected Address & Port names
   const points: RoutePoint[] = [
-    { id: 'p1', name: 'Factory', sub: 'Shipper', type: 'home' },
-    { id: 'p2', name: 'Origin Hub', sub: 'CFS', type: 'hub' },
-    { id: 'p3', name: isAir ? 'Airport' : 'Origin Port', sub: 'POL', type: 'port' },
-    { id: 'p4', name: isAir ? 'Air Linehaul' : 'Sea Linehaul', sub: isAir ? 'Flight' : 'Vessel', type: 'linehaul' },
-    { id: 'p5', name: isAir ? 'Dest Airport' : 'Dest Port', sub: 'POD', type: 'dest_port' },
-    { id: 'p6', name: 'Dest Hub', sub: 'CFS', type: 'dest_hub' },
-    { id: 'p7', name: 'Consignee', sub: 'Customer', type: 'customer' },
+    {
+      id: 'p1',
+      name: displayFromAddr,
+      sub: 'Shipper Pickup',
+      fullTitle: `Origin Pickup Address: ${displayFromAddr}`,
+      type: 'home',
+    },
+    {
+      id: 'p2',
+      name: 'Origin Hub',
+      sub: 'CFS Consolidation',
+      fullTitle: 'Origin Consolidation CFS Terminal',
+      type: 'hub',
+    },
+    {
+      id: 'p3',
+      name: displayOriginPort,
+      sub: isAir ? 'Origin Airport (POL)' : 'Origin Seaport (POL)',
+      fullTitle: `Origin Gateway Port: ${displayOriginPort}`,
+      type: 'port',
+    },
+    {
+      id: 'p4',
+      name: isAir ? 'Air Linehaul Flight' : 'Sea Linehaul Vessel',
+      sub: isAir ? 'Direct Flight' : 'Ocean Liner Voyage',
+      fullTitle: isAir ? 'Main Freight Air Cargo Transit' : 'Main Freight Ocean Vessel Transit',
+      type: 'linehaul',
+    },
+    {
+      id: 'p5',
+      name: displayDestPort,
+      sub: isAir ? 'Dest Airport (POD)' : 'Dest Seaport (POD)',
+      fullTitle: `Destination Gateway Port: ${displayDestPort}`,
+      type: 'dest_port',
+    },
+    {
+      id: 'p6',
+      name: 'Dest Hub',
+      sub: 'CFS Deconsolidation',
+      fullTitle: 'Destination CFS Terminal',
+      type: 'dest_hub',
+    },
+    {
+      id: 'p7',
+      name: displayToAddr,
+      sub: 'Consignee Door',
+      fullTitle: `Destination Delivery Address: ${displayToAddr}`,
+      type: 'customer',
+    },
   ];
 
-  // 6 Intermediate Flow Connections (Flow Names between the Points)
+  // 6 Intermediate Flow Connections (Flow Names between Points)
   const flows: FlowConnector[] = [
     {
       id: 'f1',
-      flowName: 'First Mile Pickup',
+      flowName: `First Mile Pickup from ${displayFromAddr}`,
       shortLabel: 'First Mile',
       milestoneCode: 'F-01',
-      description: 'First-mile truck pickup from shipper factory to origin consolidation hub.',
+      description: `First-mile truck pickup from ${displayFromAddr} to origin consolidation hub.`,
       stakeholder: 'Drayage Trucker',
       estimatedTime: '2 - 4 Hours',
       document: 'Dock Receipt & Dispatch Order',
+      vehicleType: 'truck',
     },
     {
       id: 'f2',
-      flowName: 'Transfer & Drayage',
+      flowName: `Transfer to ${displayOriginPort}`,
       shortLabel: 'Drayage',
       milestoneCode: 'F-02',
-      description: 'Cargo transfer, palletization, and drayage transport to terminal.',
+      description: `Cargo transfer, palletization, and drayage transport to ${displayOriginPort}.`,
       stakeholder: 'Hub Logistics Team',
       estimatedTime: '3 - 6 Hours',
       document: 'Terminal Gate Pass',
+      vehicleType: 'truck',
     },
     {
       id: 'f3',
       flowName: 'Export Customs Clearance',
       shortLabel: 'Export Clearance',
       milestoneCode: 'F-03',
-      description: 'Automated AES export customs filing & gantry loading.',
+      description: `Automated AES export customs filing & gantry loading at ${displayOriginPort}.`,
       stakeholder: 'Export Customs Broker',
       estimatedTime: '4 - 12 Hours',
       document: 'Export Clearance Release',
+      vehicleType: 'clearance',
     },
     {
       id: 'f4',
-      flowName: isAir ? 'Air Freight Linehaul' : 'Ocean Freight Linehaul',
+      flowName: isAir ? `Air Linehaul (${displayOriginPort} ➔ ${displayDestPort})` : `Ocean Linehaul (${displayOriginPort} ➔ ${displayDestPort})`,
       shortLabel: isAir ? 'Air Freight' : 'Ocean Linehaul',
       milestoneCode: 'F-04',
       description: isAir
-        ? 'Direct air cargo flight transit to destination airport.'
-        : 'Deep-sea container liner vessel voyage with AIS tracking.',
+        ? `Direct air cargo flight transit from ${displayOriginPort} to ${displayDestPort}.`
+        : `Deep-sea container liner vessel voyage from ${displayOriginPort} to ${displayDestPort} with AIS tracking.`,
       stakeholder: isAir ? 'Air Carrier' : 'Ocean Carrier',
       estimatedTime: isAir ? '12 - 36 Hours' : '10 - 25 Days',
       document: isAir ? 'Air Waybill (AWB)' : 'Master Bill of Lading (MBL)',
+      vehicleType: 'main_linehaul',
     },
     {
       id: 'f5',
       flowName: 'Import Customs Clearance',
       shortLabel: 'Import Clearance',
       milestoneCode: 'F-05',
-      description: 'Vessel unberthing/discharge, CBP import clearance & DO release.',
+      description: `Vessel unberthing/discharge at ${displayDestPort}, CBP import clearance & DO release.`,
       stakeholder: 'Import Customs Broker',
       estimatedTime: '6 - 24 Hours',
       document: 'Import Customs Entry 7501',
+      vehicleType: 'clearance',
     },
     {
       id: 'f6',
-      flowName: 'Last Mile Delivery',
+      flowName: `Last Mile Delivery to ${displayToAddr}`,
       shortLabel: 'Last Mile',
       milestoneCode: 'F-06',
-      description: 'Outbound drayage from dest hub to consignee door with clean POD.',
+      description: `Outbound drayage from destination terminal to ${displayToAddr} with clean POD.`,
       stakeholder: 'Last-Mile Delivery Trucker',
       estimatedTime: '3 - 8 Hours',
       document: 'Signed Proof of Delivery (POD)',
+      vehicleType: 'truck',
     },
   ];
 
@@ -133,12 +210,13 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
   const activeFlowData = flows.find((f) => f.id === activeFlowId);
 
   return (
-    <div className="shipment-visual-flow-card node-flow-style fit-width">
+    <div className={`shipment-visual-flow-card node-flow-style fit-width ${isAir ? 'air-mode' : 'ocean-mode'}`}>
       {/* Card Header */}
       <div className="flow-card-header">
         <div className="flow-header-title-group">
-          <span className="flow-badge">
-            {isAir ? <Plane size={12} /> : <Ship size={12} />} {isAir ? 'Air Freight Route' : 'Ocean Freight Route'}
+          <span className={`flow-badge ${isAir ? 'air-badge' : 'ocean-badge'}`}>
+            {isAir ? <Plane size={14} className="pulse-icon" /> : <Ship size={14} className="bobbing-icon" />}{' '}
+            {isAir ? 'Air Freight Route' : 'Ocean Freight Route'}
           </span>
           <h3 className="flow-title">Point-to-Point Operational Route & Leg Flows</h3>
         </div>
@@ -154,8 +232,57 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
         </div>
       </div>
 
-      {/* Main Chain: 100% Fit Width without Horizontal Scrollbar */}
-      <div className="point-to-point-flow-wrapper fit-width">
+      {/* Main Chain: 100% Fit Width with Realistic Animated Ocean Sea & Drifting Clouds */}
+      <div className={`point-to-point-flow-wrapper fit-width ${isAir ? 'sky-background' : 'sea-background'}`}>
+        {/* Animated Background Ambience */}
+        <div className="flow-ambience-overlay">
+          {isAir ? (
+            /* ☁️ VIBRANT SKY & DRIFTING CLOUDS */
+            <div className="sky-canvas">
+              <Sun size={28} className="sky-sun-glow" />
+              <div className="drifting-clouds-group">
+                <div className="cloud-wrapper cloud-1">
+                  <Cloud size={40} className="cloud-icon" />
+                </div>
+                <div className="cloud-wrapper cloud-2">
+                  <Cloud size={34} className="cloud-icon" />
+                </div>
+                <div className="cloud-wrapper cloud-3">
+                  <Cloud size={46} className="cloud-icon" />
+                </div>
+                <div className="cloud-wrapper cloud-4">
+                  <Cloud size={28} className="cloud-icon" />
+                </div>
+                <div className="cloud-wrapper cloud-5">
+                  <Cloud size={36} className="cloud-icon" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* 🌊 REALISTIC ROLLING OCEAN SEA WATER WITH FOAM & WAVES */
+            <div className="sea-canvas">
+              <Compass size={22} className="sea-compass-icon" />
+              <div className="ocean-waves-container">
+                <svg className="sea-wave-svg wave-layer-1" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                  <path d="M0,0 C150,90 350,-40 500,45 C650,110 900,-30 1200,30 L1200,120 L0,120 Z"></path>
+                </svg>
+                <svg className="sea-wave-svg wave-layer-2" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                  <path d="M0,20 C200,-20 400,70 600,15 C800,-30 1000,60 1200,10 L1200,120 L0,120 Z"></path>
+                </svg>
+                <svg className="sea-wave-svg wave-layer-3" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                  <path d="M0,40 C300,80 600,-20 900,60 C1050,90 1150,30 1200,45 L1200,120 L0,120 Z"></path>
+                </svg>
+              </div>
+              <div className="sea-foam-particles">
+                <span className="foam-dot f1"></span>
+                <span className="foam-dot f2"></span>
+                <span className="foam-dot f3"></span>
+                <span className="foam-dot f4"></span>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flow-chain-container fit-width">
           {points.map((point, index) => {
             const active = isPointActive(point.type);
@@ -165,34 +292,74 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
             return (
               <React.Fragment key={point.id}>
                 {/* 📍 POINT NODE */}
-                <div className={`route-point-node fit ${active ? 'active' : 'muted'} ${point.type === 'linehaul' ? 'center-linehaul' : ''}`}>
-                  <div className="point-icon-box compact">
-                    {point.type === 'home' && <Home size={14} />}
-                    {point.type === 'hub' && <Warehouse size={14} />}
-                    {point.type === 'port' && <Anchor size={14} />}
-                    {point.type === 'linehaul' && (isAir ? <Plane size={15} /> : <Ship size={15} />)}
-                    {point.type === 'dest_port' && <Anchor size={14} />}
-                    {point.type === 'dest_hub' && <Warehouse size={14} />}
-                    {point.type === 'customer' && <Home size={14} />}
+                <div
+                  className={`route-point-node fit ${active ? 'active' : 'muted'} ${
+                    point.type === 'linehaul' ? 'center-linehaul' : ''
+                  }`}
+                  title={point.fullTitle || point.name}
+                >
+                  <div className={`point-icon-box compact ${point.type}-node-box`}>
+                    {point.type === 'home' && <Home size={18} className="node-icon pulse-home" />}
+                    {point.type === 'hub' && <Warehouse size={18} className="node-icon pulse-hub" />}
+                    {point.type === 'port' && <Anchor size={18} className="node-icon pulse-port" />}
+                    {point.type === 'linehaul' &&
+                      (isAir ? (
+                        <Plane size={22} className="node-icon float-plane" />
+                      ) : (
+                        <Ship size={22} className="node-icon bob-ship" />
+                      ))}
+                    {point.type === 'dest_port' && <Anchor size={18} className="node-icon pulse-port" />}
+                    {point.type === 'dest_hub' && <Warehouse size={18} className="node-icon pulse-hub" />}
+                    {point.type === 'customer' && <Home size={18} className="node-icon pulse-home" />}
+
+                    {/* Aura Glow Effect */}
+                    {active && <div className="node-aura-pulse"></div>}
                   </div>
 
                   <div className="point-text-labels compact">
-                    <span className="point-name">{point.name}</span>
+                    <span className="point-name" title={point.fullTitle || point.name}>
+                      {point.name}
+                    </span>
                     <span className="point-sub">{point.sub}</span>
                   </div>
                 </div>
 
-                {/* ↔️ FLOW CONNECTOR LEG (Flow Name between Points) */}
+                {/* ↔️ FLOW CONNECTOR LEG WITH BIGGER ANIMATED MOVING VEHICLES */}
                 {flow && (
                   <div
-                    className={`flow-connector-leg fit ${flowActive ? 'active' : 'muted'} ${activeFlowId === flow.id ? 'selected' : ''}`}
+                    className={`flow-connector-leg fit ${flowActive ? 'active' : 'muted'} ${
+                      activeFlowId === flow.id ? 'selected' : ''
+                    } leg-${flow.vehicleType}`}
                     onClick={() => setActiveFlowId(activeFlowId === flow.id ? null : flow.id)}
                     title={`${flow.flowName} - Click for details`}
                   >
                     <div className="flow-line-track">
                       <span className="flow-arrow-head left">‹</span>
-                      <div className="flow-dashed-line"></div>
+
+                      {/* Laser Beam & Dashed Track Line */}
+                      <div className="flow-dashed-line">
+                        {flowActive && <div className="flow-laser-pulse"></div>}
+                      </div>
+
                       <span className="flow-arrow-head right">›</span>
+
+                      {/* 🚗 ✈️ 🚢 BIGGER ANIMATED MOVING VEHICLES ALONG THE LEG */}
+                      {flowActive && (
+                        <div className="vehicle-traveler-container">
+                          {flow.vehicleType === 'truck' && (
+                            <Truck size={16} className="animated-vehicle truck-driving" />
+                          )}
+                          {flow.vehicleType === 'clearance' && (
+                            <ShieldCheck size={16} className="animated-vehicle clearance-scanning" />
+                          )}
+                          {flow.vehicleType === 'main_linehaul' &&
+                            (isAir ? (
+                              <Plane size={22} className="animated-vehicle plane-flying" />
+                            ) : (
+                              <Ship size={22} className="animated-vehicle ship-sailing" />
+                            ))}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flow-label-badge compact">
@@ -224,9 +391,15 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
           <p className="detail-desc">{activeFlowData.description}</p>
 
           <div className="detail-meta-row">
-            <span className="meta-item"><UserCheck size={12} /> {activeFlowData.stakeholder}</span>
-            <span className="meta-item"><Clock size={12} /> {activeFlowData.estimatedTime}</span>
-            <span className="meta-item doc"><FileText size={12} /> {activeFlowData.document}</span>
+            <span className="meta-item">
+              <UserCheck size={12} /> {activeFlowData.stakeholder}
+            </span>
+            <span className="meta-item">
+              <Clock size={12} /> {activeFlowData.estimatedTime}
+            </span>
+            <span className="meta-item doc">
+              <FileText size={12} /> {activeFlowData.document}
+            </span>
           </div>
         </div>
       )}
