@@ -42,7 +42,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, onSte
                 {isCompleted ? <Check size={15} /> : <Icon size={15} />}
               </div>
               <div className="step-text">
-                <span className="step-title">{step.title}</span>
+                <span>{step.title}</span>
                 <span className="step-subtitle">{step.subtitle}</span>
               </div>
             </div>

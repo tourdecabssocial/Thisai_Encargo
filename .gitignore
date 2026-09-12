@@ -5,12 +5,29 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 lerna-debug.log*
+.eslintcache
 
-# Dependencies & Build Output
+# Dependencies
 node_modules
+.pnpm-store
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Build Outputs & Archives
 dist
 dist-ssr
-*.local
+build
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.tsbuildinfo
+.vite/
 
 # Environment Variables & Secrets (NEVER COMMIT SENSITIVE KEYS)
 .env
@@ -19,19 +36,38 @@ dist-ssr
 .env.test.local
 .env.production.local
 
-# Temp & Artifact Files
+# Temp & AI Agent Artifact Files
 /tmp/
 *.tmp
 ide
 .antigravityignore
+.antigravity/
+.gemini/
+
+# Test & Coverage Reports
+coverage/
+.nyc_output/
+*.lcov
 
 # Editor & System Files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
 .idea
-.DS_Store
+.vs
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini

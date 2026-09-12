@@ -14,6 +14,12 @@ export interface PortRecord {
   remarks?: string;
 }
 
+export interface PortSearchResult {
+  ports: PortRecord[];
+  matchLevel: 'city' | 'state' | 'country';
+  matchedLocationName: string;
+}
+
 // 📦 Complete UN/LOCODE Dataset (24,884 Ports & Airports) compiled dynamically from port_dataset/csv/
 export const UNLOCODE_CSV_DATASET: PortRecord[] = (unlocodePortsRaw as any[]).map((item) => ({
   unlocode: item.unlocode,
@@ -29,6 +35,144 @@ export const UNLOCODE_CSV_DATASET: PortRecord[] = (unlocodePortsRaw as any[]).ma
   remarks: item.remarks,
 }));
 
+// 🌐 Tamil to English Transliteration Dictionary for Port Matching Accuracy
+const TAMIL_TO_ENGLISH_MAP: Record<string, string> = {
+  'சென்னை மாவட்டம்': 'Chennai',
+  'சென்னை': 'Chennai',
+  'தமிழ் நாடு': 'Tamil Nadu',
+  'தமிழ்நாடு': 'Tamil Nadu',
+  'கோயம்புத்தூர்': 'Coimbatore',
+  'மதுரை': 'Madurai',
+  'தூத்துக்குடி': 'Tuticorin',
+  'திருச்சிராப்பள்ளி': 'Tiruchirappalli',
+  'திருச்சி': 'Trichy',
+  'சேலம்': 'Salem',
+  'ஈரோடு': 'Erode',
+  'வேலூர்': 'Vellore',
+  'தஞ்சாவூர்': 'Thanjavur',
+  'கன்னியாகுமரி': 'Kanyakumari',
+  'இந்தியா': 'India',
+  'மாவட்டம': '',
+  'மாவட்டம்': '',
+};
+
+export const sanitizeCityToEnglish = (inputStr: string): string => {
+  if (!inputStr) return '';
+  let text = inputStr;
+
+  Object.keys(TAMIL_TO_ENGLISH_MAP).forEach((tamilKey) => {
+    if (text.includes(tamilKey)) {
+      text = text.split(tamilKey).join(TAMIL_TO_ENGLISH_MAP[tamilKey]);
+    }
+  });
+
+  text = text.replace(/[\u0B80-\u0BFF]+/g, '').trim();
+  text = text.replace(/\s+/g, ' ').replace(/^,\s*|,\s*$/g, '').trim();
+  if (text.toLowerCase().endsWith(' district')) {
+    text = text.substring(0, text.length - 9).trim();
+  }
+  return text || inputStr;
+};
+
+/**
+ * 3-Tier Hierarchical Fallback Port Search Engine:
+ * 1. Tier 1: Search by City
+ * 2. Tier 2: Search by State / Subdivision (if 0 ports found in city)
+ * 3. Tier 3: Search by Country (if 0 ports found in state)
+ */
+export const fetchPortsWithHierarchicalFallback = (
+  addressInput: string | { city?: string; state?: string; countryCode?: string; country?: string; label?: string } | null,
+  mode?: string | null
+): PortSearchResult => {
+  if (!addressInput) {
+    return { ports: [], matchLevel: 'city', matchedLocationName: '' };
+  }
+
+  const isAir = mode === 'AIR' || mode === 'Air';
+
+  let city = '';
+  let state = '';
+  let countryCode = '';
+  let countryName = '';
+
+  if (typeof addressInput === 'object') {
+    city = addressInput.city || addressInput.label || '';
+    state = addressInput.state || '';
+    countryCode = addressInput.countryCode || '';
+    countryName = addressInput.country || '';
+  } else {
+    const parts = addressInput.split(',').map((p) => p.trim());
+    city = parts[0] || '';
+    if (parts.length > 1) state = parts[parts.length - 2] || '';
+    if (parts.length > 2) countryName = parts[parts.length - 1] || '';
+  }
+
+  city = sanitizeCityToEnglish(city);
+  state = sanitizeCityToEnglish(state);
+
+  const modeFiltered = UNLOCODE_CSV_DATASET.filter((p) => (isAir ? p.is_air_port : p.is_sea_port));
+
+  // TIER 1: Match by City
+  if (city) {
+    const cityLower = city.toLowerCase();
+    const cityPorts = modeFiltered.filter((p) => {
+      if (countryCode && p.country.toUpperCase() !== countryCode.toUpperCase()) return false;
+      const pName = p.port_name.toLowerCase();
+      const pCode = p.unlocode.toLowerCase();
+      return pName.includes(cityLower) || cityLower.includes(pName) || pCode.includes(cityLower);
+    });
+
+    if (cityPorts.length > 0) {
+      return { ports: cityPorts, matchLevel: 'city', matchedLocationName: city };
+    }
+  }
+
+  // TIER 2: Fallback Match by State / Subdivision (if 0 ports found in city)
+  if (state) {
+    const stateLower = state.toLowerCase();
+    const statePorts = modeFiltered.filter((p) => {
+      if (countryCode && p.country.toUpperCase() !== countryCode.toUpperCase()) return false;
+      const pSub = (p.subdivision || '').toLowerCase();
+      const pSubCode = (p.subdivision_code || '').toLowerCase();
+      const pName = p.port_name.toLowerCase();
+      return pSub.includes(stateLower) || stateLower.includes(pSub) || pSubCode === stateLower;
+    });
+
+    if (statePorts.length > 0) {
+      return { ports: statePorts, matchLevel: 'state', matchedLocationName: state };
+    }
+  }
+
+  // TIER 3: Fallback Match by Country (if 0 ports found in state)
+  if (countryCode || countryName) {
+    const targetCountryCode = (countryCode || '').toUpperCase();
+    const countryLower = countryName.toLowerCase();
+
+    const countryPorts = modeFiltered.filter((p) => {
+      if (targetCountryCode) {
+        return p.country.toUpperCase() === targetCountryCode;
+      }
+      const pCountryName = (p.country_name || '').toLowerCase();
+      return pCountryName.includes(countryLower) || countryLower.includes(pCountryName);
+    });
+
+    if (countryPorts.length > 0) {
+      return {
+        ports: countryPorts.slice(0, 20),
+        matchLevel: 'country',
+        matchedLocationName: countryName || countryCode || 'Country',
+      };
+    }
+  }
+
+  // Final fallback: Mode-filtered ports
+  return {
+    ports: modeFiltered.slice(0, 15),
+    matchLevel: 'country',
+    matchedLocationName: 'Country / Region',
+  };
+};
+
 /**
  * Fetches matching ports for a given city and country directly from the UN/LOCODE CSV dataset.
  */
@@ -37,32 +181,8 @@ export const fetchPortsByCity = (
   countryCode?: string | null,
   mode?: string | null
 ): PortRecord[] => {
-  if (!cityName || !cityName.trim()) return [];
-  const cityLower = cityName.trim().toLowerCase();
-  const isAir = mode === 'AIR' || mode === 'Air';
-
-  return UNLOCODE_CSV_DATASET.filter((p) => {
-    // Mode match (Sea vs Air)
-    if (isAir && !p.is_air_port) return false;
-    if (!isAir && !p.is_sea_port) return false;
-
-    // Country match if provided
-    if (countryCode && p.country.toUpperCase() !== countryCode.toUpperCase()) return false;
-
-    // City match against CSV port_name, ascii name, subdivision, or remarks
-    const pName = p.port_name.toLowerCase();
-    const pSub = (p.subdivision || '').toLowerCase();
-    const pRem = (p.remarks || '').toLowerCase();
-    const pCode = p.unlocode.toLowerCase();
-
-    return (
-      pName.includes(cityLower) ||
-      cityLower.includes(pName) ||
-      pSub.includes(cityLower) ||
-      pRem.includes(cityLower) ||
-      pCode.includes(cityLower)
-    );
-  });
+  const result = fetchPortsWithHierarchicalFallback({ city: cityName, countryCode: countryCode || undefined }, mode);
+  return result.ports;
 };
 
 /**
@@ -70,67 +190,11 @@ export const fetchPortsByCity = (
  * Parses free-form manual address text into city/country tokens and queries the UN/LOCODE CSV dataset.
  */
 export const findPortsFromAddress = (
-  address: string | { city?: string; countryCode?: string; country?: string; street?: string; label?: string } | null,
+  address: string | { city?: string; state?: string; countryCode?: string; country?: string; street?: string; label?: string } | null,
   mode?: string | null
 ): PortRecord[] => {
-  if (!address) return [];
-
-  const isAir = mode === 'AIR' || mode === 'Air';
-
-  // 1. If address is an object with explicit city property
-  if (typeof address === 'object') {
-    const city = address.city || address.label || '';
-    const country = address.countryCode || '';
-    const ports = fetchPortsByCity(city, country, mode);
-    if (ports.length > 0) return ports;
-    return fetchPortsByCity(city, null, mode);
-  }
-
-  // 2. If address is a free-form manually typed text string
-  const addressText = address.trim();
-  if (!addressText) return [];
-
-  // Parse address string into comma/whitespace separated tokens
-  const rawTokens = addressText
-    .split(/[,;\n]+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length > 1);
-
-  const modeFiltered = UNLOCODE_CSV_DATASET.filter((p) => (isAir ? p.is_air_port : p.is_sea_port));
-
-  // Search each token from right to left (City, State, Country are usually near the end)
-  for (let i = rawTokens.length - 1; i >= 0; i--) {
-    const token = rawTokens[i].toLowerCase();
-    if (/^\d+$/.test(token)) continue; // skip numbers/zips
-
-    const tokenMatches = modeFiltered.filter((p) => {
-      const pName = p.port_name.toLowerCase();
-      const pCountryName = (p.country_name || '').toLowerCase();
-      const pCountry = p.country.toLowerCase();
-      const pSub = (p.subdivision || '').toLowerCase();
-      const pCode = p.unlocode.toLowerCase();
-
-      return (
-        pName === token ||
-        pName.includes(token) ||
-        token.includes(pName) ||
-        pSub === token ||
-        (pSub && pSub.includes(token)) ||
-        pCode === token
-      );
-    });
-
-    if (tokenMatches.length > 0) {
-      return tokenMatches;
-    }
-  }
-
-  // Fallback: substring check across whole address text
-  const cleanFull = addressText.toLowerCase();
-  return modeFiltered.filter((p) => {
-    const pName = p.port_name.toLowerCase();
-    return cleanFull.includes(pName) || pName.includes(cleanFull);
-  });
+  const result = fetchPortsWithHierarchicalFallback(address, mode);
+  return result.ports;
 };
 
 /**
@@ -138,56 +202,36 @@ export const findPortsFromAddress = (
  */
 export const fetchFromMeiliSearch = async (
   query: string,
-  countryCode?: string | null,
-  subdivisionCode?: string | null,
-  mode?: string | null
+  mode: 'Air' | 'Ocean' | string = 'Ocean',
+  countryCode?: string
 ): Promise<PortRecord[]> => {
-  const isAir = mode === 'AIR' || mode === 'Air';
-  const modeParam = isAir ? 'AIR' : 'SHIP';
+  if (!query || query.trim().length === 0) return [];
+  const cleanQuery = query.trim();
+  const isAir = mode === 'Air';
 
-  // 1. Try python FastAPI port_dataset backend first if available
   try {
-    const apiRes = await fetch(
-      `http://127.0.0.1:8000/api/port?city_name=${encodeURIComponent(query || '')}&mode=${modeParam}${
-        countryCode ? `&country_code=${encodeURIComponent(countryCode)}` : ''
-      }`
-    );
-    if (apiRes.ok) {
-      const json = await apiRes.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        return json.data.map((item: any) => ({
-          unlocode: item.unlocode,
-          port_name: item.port_name,
-          country: item.country_code,
-          country_name: item.country_name,
-          city: item.port_name,
-          subdivision: item.state_name,
-          is_sea_port: item.is_sea_port,
-          is_air_port: item.is_air_port,
-          function: isAir ? '4' : '1',
+    const params = new URLSearchParams({ q: cleanQuery, mode: isAir ? 'AIR' : 'SEA' });
+    if (countryCode) params.append('country', countryCode);
+
+    const res = await fetch(`http://127.0.0.1:8000/api/port?${params.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((item: any) => ({
+          unlocode: item.unlocode || item.code,
+          port_name: item.name || item.port_name,
+          country: item.country,
+          subdivision: item.subdivision,
+          is_sea_port: item.is_sea_port ?? !isAir,
+          is_air_port: item.is_air_port ?? isAir,
         }));
       }
     }
   } catch {
-    // FastAPI server offline -> proceed to UN/LOCODE CSV dataset in memory
+    // API offline, fallback to client UN/LOCODE CSV dataset
   }
 
-  // 2. Query UN/LOCODE CSV Dataset
-  const qLower = (query || '').trim().toLowerCase();
-
-  return UNLOCODE_CSV_DATASET.filter((p) => {
-    if (isAir && !p.is_air_port) return false;
-    if (!isAir && !p.is_sea_port) return false;
-
-    if (countryCode && p.country.toUpperCase() !== countryCode.toUpperCase()) return false;
-
-    if (qLower) {
-      const codeMatch = p.unlocode.toLowerCase().includes(qLower);
-      const nameMatch = p.port_name.toLowerCase().includes(qLower);
-      const subMatch = (p.subdivision || '').toLowerCase().includes(qLower);
-      return codeMatch || nameMatch || subMatch;
-    }
-
-    return true;
-  });
+  // Fallback: Client-side UN/LOCODE search
+  const result = fetchPortsWithHierarchicalFallback(cleanQuery, mode);
+  return result.ports;
 };

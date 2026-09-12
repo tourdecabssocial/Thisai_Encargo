@@ -38,6 +38,8 @@ export interface EquipmentRecommendation {
 export interface AIEquipmentFlags {
   is_oog: boolean;
   is_reefer: boolean;
+  is_hazmat?: boolean;
+  imo_class_code?: string;
   payload_warning: boolean;
 }
 

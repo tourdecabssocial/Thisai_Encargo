@@ -12,6 +12,7 @@ import {
   type EquipmentMixResult,
 } from '../../utils/containerSpecs';
 import { requestAIEquipmentRecommendation } from '../../services/aiRecommendationService';
+import { detectCargoHazmatClassification } from '../../services/equipmentEvaluationEngine';
 import type { AIEquipmentOutput } from '../../types/aiEquipment';
 import {
   calculateTotalGrossWeightKg,
@@ -318,8 +319,9 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
     );
 
     // 3. Dangerous Goods & Reefer Flags (Suggested by AI model output or User selection)
-    const isHazmat = Boolean((aiResult?.flags as any)?.is_hazmat) || Boolean(formData.hazardous_materials);
-    const imoClassCode = formData.un_class_code || 'Class 3 (Flammable Liquids)';
+    const hazmatEval = detectCargoHazmatClassification(formData.commodity_description || '', formData.hs_code || '');
+    const isHazmat = Boolean(aiResult?.flags?.is_hazmat) || hazmatEval.isHazmat || Boolean(formData.hazardous_materials);
+    const imoClassCode = String(aiResult?.flags?.imo_class_code || hazmatEval.imoClassCode || formData.un_class_code || 'Class 3 (Flammable Liquids)');
 
     const isReefer = Boolean(aiResult?.flags?.is_reefer) || Boolean(formData.temperature_control_required);
     const targetTemperature = formData.target_temperature || '2°C – 4°C (Chilled Cold Chain)';
@@ -340,28 +342,61 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
 
   const aiRecommendation = deriveAIRecommendation();
 
-  // Live Auto-Sync: Update container fields when FCL is selected or when cargo volume changes
+  // Auto-sync AI Hazmat Detection into RFQ Form Data
   useEffect(() => {
-    if (formData.load_type === 'FCL') {
-      const selectedType = formData.container_type || aiRecommendation.containerType;
-      const spec = getContainerSpecByNameOrCode(selectedType);
-      const minRequiredCount = Math.max(1, Math.ceil(totalVolumeCbm / (spec.cbmCapacity || 33.2)));
+    const hazmatEval = detectCargoHazmatClassification(formData.commodity_description || '', formData.hs_code || '');
+    const isDetected = Boolean(aiResult?.flags?.is_hazmat) || hazmatEval.isHazmat;
 
-      if (!formData.container_type) {
-        onSetFieldValue('container_type', aiRecommendation.containerType);
+    if (isDetected) {
+      if (!formData.hazardous_materials) {
+        onSetFieldValue('hazardous_materials', true);
       }
-      if (!formData.container_count || formData.container_count < minRequiredCount) {
+      const classCodeToSet = aiResult?.flags?.imo_class_code || hazmatEval.imoClassCode;
+      if (classCodeToSet && formData.un_class_code !== classCodeToSet) {
+        onSetFieldValue('un_class_code', classCodeToSet);
+      }
+    }
+  }, [formData.commodity_description, formData.hs_code, aiResult?.flags?.is_hazmat, aiResult?.flags?.imo_class_code]);
+
+  // AI Load Type Evaluation: Calculate single container capacity utilizations
+  const recSpec = getContainerSpecByNameOrCode(aiRecommendation.containerType || "20' Standard");
+  const recSingleVolCap = recSpec.cbmCapacity || 33.2;
+  const recSingleWeightCap = recSpec.maxPayloadKg || 28130;
+
+  const recVolumeUtilPercent = recSingleVolCap > 0 ? (totalVolumeCbm / recSingleVolCap) * 100 : 0;
+  const recWeightUtilPercent = recSingleWeightCap > 0 ? (totalGrossWeight / recSingleWeightCap) * 100 : 0;
+
+  // Rule: If AI suggests 1 container AND both volume & weight utilization < 75% => keep LCL. Otherwise => convert to FCL.
+  const isUnderThresholdForLCL = aiRecommendation.containerCount === 1 && recVolumeUtilPercent < 75 && recWeightUtilPercent < 75;
+
+  // Live Auto-Sync & AI Load Type Prediction Decision
+  useEffect(() => {
+    if (totalVolumeCbm > 0 || totalGrossWeight > 0) {
+      if (isUnderThresholdForLCL) {
+        if (formData.load_type !== 'LCL') {
+          onSetFieldValue('load_type', 'LCL');
+          onSetFieldValue('container_type', '');
+          onSetFieldValue('container_count', 1);
+        }
+      } else {
+        // Utilization >= 75% OR container count > 1 -> Auto-convert to FCL
+        if (formData.load_type !== 'FCL') {
+          onSetFieldValue('load_type', 'FCL');
+        }
+        if (!formData.container_type) {
+          onSetFieldValue('container_type', aiRecommendation.containerType);
+        }
+        const minRequiredCount = Math.max(1, Math.ceil(totalVolumeCbm / (recSpec.cbmCapacity || 33.2)));
         onSetFieldValue('container_count', Math.max(aiRecommendation.containerCount, minRequiredCount));
       }
-    } else if (formData.load_type === 'LCL') {
-      if (formData.container_type) onSetFieldValue('container_type', '');
-      if (formData.container_count !== 1) onSetFieldValue('container_count', 1);
     }
   }, [
-    formData.load_type,
     totalVolumeCbm,
+    totalGrossWeight,
+    isUnderThresholdForLCL,
     aiRecommendation.containerType,
     aiRecommendation.containerCount,
+    recSpec.cbmCapacity,
   ]);
 
 
@@ -645,7 +680,7 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             error={errors.currency}
           />
 
-          <FormSelect
+          {/* <FormSelect
             label="Load Type *"
             name="load_type"
             value={formData.load_type}
@@ -656,8 +691,61 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
               { value: 'AIR_STANDARD', label: 'Air Standard Freight' },
             ]}
             error={errors.load_type}
-          />
+          /> */}
         </div>
+
+        {/* AI Load Type Recommendation Strategy Banner
+        <div style={{ marginTop: '1rem' }}>
+          {isUnderThresholdForLCL ? (
+            <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1.5px solid #86efac', borderRadius: '10px', padding: '0.85rem 1.1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ background: '#22c55e', color: '#ffffff', padding: '0.45rem', borderRadius: '8px', display: 'flex' }}>
+                    <Sparkles size={18} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, color: '#14532d', fontSize: '0.875rem' }}>
+                        AI Load Type Decision: Kept as LCL (Less than Container Load)
+                      </span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#ffffff', color: '#15803d', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid #86efac' }}>
+                        Vol Util: {recVolumeUtilPercent.toFixed(1)}% | Weight Util: {recWeightUtilPercent.toFixed(1)}% (&lt; 75%)
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 500, display: 'block', marginTop: '0.2rem' }}>
+                      AI evaluated 1 container requirement with both Volume ({recVolumeUtilPercent.toFixed(1)}%) and Payload Weight ({recWeightUtilPercent.toFixed(1)}%) utilization below 75%. Kept as LCL for cost optimization.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)', border: '1.5px solid #93c5fd', borderRadius: '10px', padding: '0.85rem 1.1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.45rem', borderRadius: '8px', display: 'flex' }}>
+                    <Sparkles size={18} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '0.875rem' }}>
+                        AI Load Type Decision: Converted to FCL (Full Container Load)
+                      </span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#ffffff', color: '#1d4ed8', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid #93c5fd' }}>
+                        Suggested Fleet: {aiRecommendation.equipmentMix ? aiRecommendation.equipmentMix.formattedMixString : `${aiRecommendation.containerCount}x ${aiRecommendation.containerType}`}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 500, display: 'block', marginTop: '0.2rem' }}>
+                      {aiRecommendation.containerCount > 1
+                        ? `AI predicted multiple container allocation (${aiRecommendation.containerCount} containers). Automatically converted Load Type from LCL to FCL.`
+                        : `Volume utilization (${recVolumeUtilPercent.toFixed(1)}%) or Payload Weight utilization (${recWeightUtilPercent.toFixed(1)}%) reached/exceeded 75%. Automatically converted Load Type from LCL to FCL.`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div> */}
 
 
         {/* Optional Multi-SKU Expander */}
@@ -1010,47 +1098,68 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
         </div>
       </div>
 
-      {/* 4. AI Recommended Cargo & Equipment Allocation Card (Displayed ONLY if Load Type is NOT LCL) */}
-      {formData.load_type !== 'LCL' && (
-        <div
-          className="section-card"
-          style={{
-            marginTop: '1.25rem',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)',
-            border: '1.5px solid #86efac',
-            borderRadius: '12px',
-            padding: '1.15rem 1.25rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{ background: '#dcfce7', color: '#15803d', padding: '0.45rem', borderRadius: '8px', display: 'flex' }}>
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <h3 className="section-title" style={{ margin: 0, color: '#14532d', fontSize: '1rem', fontWeight: 800 }}>
-                    AI Recommended Cargo & Equipment Allocation
-                  </h3>
-                </div>
-                <span style={{ fontSize: '0.76rem', color: '#166534', fontWeight: 500 }}>
-                  Derived from package dimensions, total gross weight ({totalGrossWeight.toLocaleString()} kg), volume ({totalVolumeCbm.toFixed(2)} CBM), and HS code specifications.
-                </span>
-              </div>
+      {/* 4. AI Recommended Cargo & Equipment Allocation Card (Always Visible by Default) */}
+      <div
+        className="section-card"
+        style={{
+          marginTop: '1.25rem',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)',
+          border: '1.5px solid #86efac',
+          borderRadius: '12px',
+          padding: '1.15rem 1.25rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div style={{ background: '#dcfce7', color: '#15803d', padding: '0.45rem', borderRadius: '8px', display: 'flex' }}>
+              <Sparkles size={20} />
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {/* Hazmat / DG Badge */}
-              <div style={{ background: aiRecommendation.isHazmat ? '#fef2f2' : '#ffffff', border: aiRecommendation.isHazmat ? '1px solid #fca5a5' : '1px solid #bbf7d0', padding: '0.35rem 0.65rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: aiRecommendation.isHazmat ? '#dc2626' : '#15803d' }}>
-                {aiRecommendation.isHazmat ? `⚠️ ${aiRecommendation.imoClassCode}` : '✓ Non-Hazardous Cargo'}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 className="section-title" style={{ margin: 0, color: '#14532d', fontSize: '1rem', fontWeight: 800 }}>
+                  AI Recommended Cargo & Equipment Allocation
+                </h3>
               </div>
+              <span style={{ fontSize: '0.76rem', color: '#166534', fontWeight: 500 }}>
+                Derived from package dimensions, total gross weight ({totalGrossWeight.toLocaleString()} kg), volume ({totalVolumeCbm.toFixed(2)} CBM), and HS code specifications.
+              </span>
             </div>
           </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Hazmat / DG Badge */}
+            <div style={{ background: aiRecommendation.isHazmat ? '#fef2f2' : '#ffffff', border: aiRecommendation.isHazmat ? '1px solid #fca5a5' : '1px solid #bbf7d0', padding: '0.35rem 0.65rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, color: aiRecommendation.isHazmat ? '#dc2626' : '#15803d' }}>
+              {aiRecommendation.isHazmat ? `⚠️ ${aiRecommendation.imoClassCode}` : '✓ Non-Hazardous Cargo'}
+            </div>
+          </div>
+        </div>
 
+        {/* LCL Cargo Consolidation Banner (Shown when Load Type is LCL) */}
+        {formData.load_type === 'LCL' && (
+          <div style={{ background: '#ffffff', border: '1.5px solid #bbf7d0', borderRadius: '12px', padding: '1rem 1.15rem', marginBottom: '0.85rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ background: '#dcfce7', color: '#15803d', padding: '0.5rem', borderRadius: '8px', display: 'flex' }}>
+                  <PackageCheck size={20} />
+                </div>
+                <div>
+                  <span style={{ fontWeight: 800, color: '#14532d', fontSize: '0.9rem', display: 'block' }}>
+                    LCL Consolidated Shared Container Shipment
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#166534', display: 'block', marginTop: '0.15rem' }}>
+                    Cargo is billed per CBM / W/M (Weight or Measurement). Specific container equipment selection is managed by the freight consolidator.
+                  </span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', padding: '0.35rem 0.65rem', borderRadius: '6px' }}>
+                📦 Shared Container Rating
+              </span>
+            </div>
+          </div>
+        )}
 
-          {/* Single Unified Load & Capacity Utilization Inspector */}
-          {(() => {
+        {/* Container Fleet Allocation & Capacity Utilization Inspector (Revealed ONLY when Load Type is FCL) */}
+        {formData.load_type === 'FCL' && (() => {
             const isMixedFleet = aiRecommendation.equipmentMix && aiRecommendation.equipmentMix.mix.length > 1;
 
             if (isMixedFleet) {
@@ -1370,7 +1479,6 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             💡 <strong>AI Rationale:</strong> {aiRecommendation.rationale}
           </div>
         </div>
-      )}
     </div>
   );
 };

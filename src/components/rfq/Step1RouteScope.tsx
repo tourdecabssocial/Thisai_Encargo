@@ -3,8 +3,9 @@ import type { RFQFormData, ServiceScope, ShipmentType } from '../../types/rfq';
 import { FormSelect } from '../form/FormSelect';
 import { FormInput } from '../form/FormInput';
 import { PortAutocomplete } from '../form/PortAutocomplete';
+import { AddressAutocomplete, type ExtractedAddress } from '../form/AddressAutocomplete';
 import { mockAddresses } from '../../hooks/useRFQForm';
-import { findPortsFromAddress, type PortRecord } from '../../services/portSearchService';
+import { fetchPortsWithHierarchicalFallback, fetchPortsByCity, type PortRecord } from '../../services/portSearchService';
 import {
   Plane,
   Ship,
@@ -19,8 +20,8 @@ import {
   CheckCircle2,
   FileCheck,
   Compass,
-  Edit3,
   ListFilter,
+  Search,
 } from 'lucide-react';
 import { getMinReadyDate, getMinDeliveryDate, SCOPE_INCOTERMS_MAP } from '../../utils/rfqConstants';
 import './Step1RouteScope.css';
@@ -50,30 +51,22 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
 
   const allowedIncoterms = SCOPE_INCOTERMS_MAP[formData.service_scope] || ['FOB', 'EXW', 'CIF', 'DDP'];
 
-  // Manual Address Input Mode toggles
-  const [isManualFrom, setIsManualFrom] = useState(false);
-  const [manualFromText, setManualFromText] = useState('12 GST Road, Guindy, Chennai, Tamil Nadu, India');
-  
-  const [isManualTo, setIsManualTo] = useState(false);
-  const [manualToText, setManualToText] = useState('450 7th Ave, New York, NY 10123, United States');
+  // Toggle state: OpenStreetMap Address Autocomplete vs Saved Address Dropdown
+  const [useSavedFrom, setUseSavedFrom] = useState(false);
+  const [useSavedTo, setUseSavedTo] = useState(false);
 
-  // Address Details & UN/LOCODE CSV Ports Matching
+  // Address Details & 3-Tier Hierarchical UN/LOCODE CSV Ports Matching (City -> State -> Country)
   const fromAddrObj = formData.from_address || mockAddresses.find((a) => a.id === formData.from_address_id) || mockAddresses[0];
   const toAddrObj = formData.to_address || mockAddresses.find((a) => a.id === formData.to_address_id) || mockAddresses[1];
 
-  const originInput = isManualFrom ? manualFromText : (fromAddrObj as any);
-  const destInput = isManualTo ? manualToText : (toAddrObj as any);
+  const originSearchResult = fetchPortsWithHierarchicalFallback(fromAddrObj as any, formData.mode);
+  const destSearchResult = fetchPortsWithHierarchicalFallback(toAddrObj as any, formData.mode);
 
-  const originCityPorts: PortRecord[] = findPortsFromAddress(originInput, formData.mode);
-  const destCityPorts: PortRecord[] = findPortsFromAddress(destInput, formData.mode);
+  const originCityPorts: PortRecord[] = originSearchResult.ports;
+  const destCityPorts: PortRecord[] = destSearchResult.ports;
 
-  const originLocationLabel = isManualFrom
-    ? (manualFromText.split(',')[manualFromText.split(',').length - 2] || manualFromText || 'Origin City').trim()
-    : (fromAddrObj?.city || 'Chennai');
-
-  const destLocationLabel = isManualTo
-    ? (manualToText.split(',')[manualToText.split(',').length - 2] || manualToText || 'Destination City').trim()
-    : (toAddrObj?.city || 'New York');
+  const originLocationLabel = (fromAddrObj?.city || 'Origin').trim();
+  const destLocationLabel = (toAddrObj?.city || 'Destination').trim();
 
   // Auto-sync origin & destination gateway ports when address, city, or mode changes
   useEffect(() => {
@@ -88,7 +81,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
         onSetFieldValue('origin_port_name', defaultPort.port_name);
       }
     }
-  }, [formData.from_address_id, manualFromText, isManualFrom, formData.mode, formData.service_scope]);
+  }, [formData.from_address, formData.mode, formData.service_scope]);
 
   useEffect(() => {
     if (isToAddress && destCityPorts.length > 0) {
@@ -102,7 +95,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
         onSetFieldValue('destination_port_name', defaultPort.port_name);
       }
     }
-  }, [formData.to_address_id, manualToText, isManualTo, formData.mode, formData.service_scope]);
+  }, [formData.to_address, formData.mode, formData.service_scope]);
 
   const scopeOptions: { code: ServiceScope; title: string; desc: string; badge: string; icon: React.ReactNode }[] = [
     {
@@ -332,7 +325,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                   </label>
                   <button
                     type="button"
-                    onClick={() => setIsManualFrom(!isManualFrom)}
+                    onClick={() => setUseSavedFrom(!useSavedFrom)}
                     style={{
                       fontSize: '0.70rem',
                       fontWeight: 700,
@@ -345,21 +338,12 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                       gap: '0.2rem',
                     }}
                   >
-                    {isManualFrom ? <ListFilter size={12} /> : <Edit3 size={12} />}
-                    {isManualFrom ? 'Use Saved Address' : 'Enter Address Manually'}
+                    {useSavedFrom ? <Search size={12} /> : <ListFilter size={12} />}
+                    {useSavedFrom ? 'Use OpenStreetMap Autocomplete' : 'Select Saved Address'}
                   </button>
                 </div>
 
-                {isManualFrom ? (
-                  <FormInput
-                    label=""
-                    name="custom_from_address"
-                    value={manualFromText}
-                    onChange={(e) => setManualFromText(e.target.value)}
-                    placeholder="Enter manual street, city, state, country..."
-                    icon={<MapPin size={15} />}
-                  />
-                ) : (
+                {useSavedFrom ? (
                   <FormSelect
                     label=""
                     name="from_address_id"
@@ -374,17 +358,37 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                     error={fromError}
                     icon={<MapPin size={15} />}
                   />
+                ) : (
+                  <AddressAutocomplete
+                    label=""
+                    value={typeof formData.from_address === 'string' ? formData.from_address : formData.from_address?.label || ''}
+                    placeholder="Search OpenStreetMap address (city, state, country auto-extracted)..."
+                    error={fromError}
+                    onChangeAddress={(extracted: ExtractedAddress) => {
+                      onSetFieldValue('from_address', {
+                        id: 'osm-custom',
+                        label: extracted.fullAddress,
+                        city: extracted.city,
+                        state: extracted.state,
+                        country: extracted.country,
+                        countryCode: extracted.countryCode,
+                      });
+                      if (extracted.countryCode) {
+                        onSetFieldValue('originCountry', extracted.countryCode);
+                      }
+                    }}
+                  />
                 )}
 
-                {/* Ports by City Feature: Display UN/LOCODE Ports dynamically resolved from CSV dataset */}
+                {/* Ports by City / State / Country Fallback Feature */}
                 <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '0.55rem 0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                     <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <Compass size={14} className="text-sky-600" />
-                      Origin Port for {originLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
+                      Origin Port for {originSearchResult.matchedLocationName || originLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
                     </label>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                      UN/LOCODE CSV Dataset
+                      {originSearchResult.matchLevel === 'city' ? 'City Match' : originSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'}
                     </span>
                   </div>
 
@@ -409,7 +413,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
 
                   <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 600, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <CheckCircle2 size={12} style={{ color: '#0284c7' }} />
-                    Auto-matched {originCityPorts.length} UN/LOCODE gateway port{originCityPorts.length > 1 ? 's' : ''} from CSV dataset for {originLocationLabel}
+                    Auto-matched {originCityPorts.length} UN/LOCODE gateway port{originCityPorts.length > 1 ? 's' : ''} for {originSearchResult.matchedLocationName || originLocationLabel} ({originSearchResult.matchLevel === 'city' ? 'City Match' : originSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'})
                   </div>
                 </div>
               </>
@@ -442,7 +446,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                   </label>
                   <button
                     type="button"
-                    onClick={() => setIsManualTo(!isManualTo)}
+                    onClick={() => setUseSavedTo(!useSavedTo)}
                     style={{
                       fontSize: '0.70rem',
                       fontWeight: 700,
@@ -455,21 +459,12 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                       gap: '0.2rem',
                     }}
                   >
-                    {isManualTo ? <ListFilter size={12} /> : <Edit3 size={12} />}
-                    {isManualTo ? 'Use Saved Address' : 'Enter Address Manually'}
+                    {useSavedTo ? <Search size={12} /> : <ListFilter size={12} />}
+                    {useSavedTo ? 'Use OpenStreetMap Autocomplete' : 'Select Saved Address'}
                   </button>
                 </div>
 
-                {isManualTo ? (
-                  <FormInput
-                    label=""
-                    name="custom_to_address"
-                    value={manualToText}
-                    onChange={(e) => setManualToText(e.target.value)}
-                    placeholder="Enter manual street, city, state, country..."
-                    icon={<MapPin size={15} />}
-                  />
-                ) : (
+                {useSavedTo ? (
                   <FormSelect
                     label=""
                     name="to_address_id"
@@ -484,17 +479,37 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                     error={toError}
                     icon={<MapPin size={15} />}
                   />
+                ) : (
+                  <AddressAutocomplete
+                    label=""
+                    value={typeof formData.to_address === 'string' ? formData.to_address : formData.to_address?.label || ''}
+                    placeholder="Search OpenStreetMap address (city, state, country auto-extracted)..."
+                    error={toError}
+                    onChangeAddress={(extracted: ExtractedAddress) => {
+                      onSetFieldValue('to_address', {
+                        id: 'osm-custom',
+                        label: extracted.fullAddress,
+                        city: extracted.city,
+                        state: extracted.state,
+                        country: extracted.country,
+                        countryCode: extracted.countryCode,
+                      });
+                      if (extracted.countryCode) {
+                        onSetFieldValue('destCountry', extracted.countryCode);
+                      }
+                    }}
+                  />
                 )}
 
-                {/* Ports by City Feature: Display UN/LOCODE Ports dynamically resolved from CSV dataset */}
+                {/* Ports by City / State / Country Fallback Feature */}
                 <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '0.55rem 0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                     <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <Compass size={14} className="text-sky-600" />
-                      Destination Port for {destLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
+                      Destination Port for {destSearchResult.matchedLocationName || destLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
                     </label>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                      UN/LOCODE CSV Dataset
+                      {destSearchResult.matchLevel === 'city' ? 'City Match' : destSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'}
                     </span>
                   </div>
 
@@ -519,7 +534,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
 
                   <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 600, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <CheckCircle2 size={12} style={{ color: '#0284c7' }} />
-                    Auto-matched {destCityPorts.length} UN/LOCODE gateway port{destCityPorts.length > 1 ? 's' : ''} from CSV dataset for {destLocationLabel}
+                    Auto-matched {destCityPorts.length} UN/LOCODE gateway port{destCityPorts.length > 1 ? 's' : ''} for {destSearchResult.matchedLocationName || destLocationLabel} ({destSearchResult.matchLevel === 'city' ? 'City Match' : destSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'})
                   </div>
                 </div>
               </>

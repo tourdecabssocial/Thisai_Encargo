@@ -65,8 +65,8 @@ const INITIAL_FORM_DATA: RFQFormData = {
   ready_date: getMinReadyDate(),
   delivery_date: getMinDeliveryDate(getMinReadyDate(), 'Ship'),
 
-  load_type: 'FCL',
-  container_type: "20' Standard",
+  load_type: 'LCL',
+  container_type: '',
   container_count: 1,
 
   hs_code: '',

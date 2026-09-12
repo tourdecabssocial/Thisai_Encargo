@@ -1,0 +1,140 @@
+.address-autocomplete-container {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.address-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.address-input-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.address-input-field {
+  width: 100%;
+  padding: 0.55rem 0.75rem 0.55rem 2.3rem;
+  font-size: 0.85rem;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.address-input-field:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.address-spinner {
+  position: absolute;
+  right: 0.75rem;
+  color: #2563eb;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.address-suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 50;
+  padding: 0.25rem 0;
+}
+
+.address-suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.82rem;
+  color: #1e293b;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.address-suggestion-item:hover {
+  background: #f0f6ff;
+  color: #1d4ed8;
+}
+
+.address-suggestion-icon {
+  margin-top: 0.15rem;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.address-suggestion-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.address-suggestion-display {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.address-suggestion-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.extracted-location-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.74rem;
+}
+
+.location-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.location-pill.city-pill {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.location-pill.state-pill {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #475569;
+}

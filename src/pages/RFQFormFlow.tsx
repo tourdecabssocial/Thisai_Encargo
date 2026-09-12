@@ -66,10 +66,12 @@ export const RFQFormFlow: React.FC = () => {
     <div className="rfq-flow-page animate-fade-in">
       <div className="rfq-flow-header">
         <div className="rfq-title-group">
-          <div className="rfq-badge">
-            <Layers size={14} /> Smart Freight Engine
+          <div className="rfq-title-row">
+            <h1 className="rfq-main-title">Request For Quote (RFQ) Form</h1>
+            <div className="rfq-badge">
+              <Layers size={13} /> Smart Freight Engine
+            </div>
           </div>
-          <h1 className="rfq-main-title">Request For Quote (RFQ) Form</h1>
           <p className="rfq-subtitle">
             Configure transport mode, service scope, commodity specs, Incoterms, and customs options.
           </p>

@@ -26,7 +26,7 @@ const geminiBackendPlugin = (): Plugin => ({
 
         if (req.method === 'POST') {
           const { SYSTEM_PROMPT_EQUIPMENT_ENGINE, sanitizeAndValidateAIResult } =
-            await import('./src/services/equipmentEvaluationEngine');
+            await import('./src/services/equipmentEvaluationEngine.ts');
           let body = '';
           req.on('data', (chunk) => {
             body += chunk;
