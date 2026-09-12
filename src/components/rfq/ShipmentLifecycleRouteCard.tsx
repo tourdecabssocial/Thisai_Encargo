@@ -92,19 +92,19 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
         {/* Visual Route Path Beam */}
         <div className="route-path-visualizer">
           <div className="route-points-row">
-            <div className="route-point">
-              <span className="route-point-label">Origin</span>
-              <span className="route-point-name" title={input.originPortOrCity || 'Origin'}>
-                {input.originPortOrCity || 'Origin'}
+            <div className="route-point" style={{ flex: 1, minWidth: 0 }}>
+              <span className="route-point-name" title={input.originPortOrCity || 'Origin Location'}>
+                {input.originPortOrCity || 'Origin Location'}
               </span>
             </div>
 
-            <span className="route-mode-pill">{input.transportMode} Linehaul</span>
+            <span className="route-mode-pill" style={{ margin: '0 0.4rem' }}>
+              {input.transportMode === 'Air' ? 'Air Linehaul' : 'Ship Linehaul'}
+            </span>
 
-            <div className="route-point" style={{ textAlign: 'right' }}>
-              <span className="route-point-label">Destination</span>
-              <span className="route-point-name" title={input.destinationPortOrCity || 'Destination'}>
-                {input.destinationPortOrCity || 'Destination'}
+            <div className="route-point" style={{ textAlign: 'right', flex: 1, minWidth: 0 }}>
+              <span className="route-point-name" title={input.destinationPortOrCity || 'Destination Location'}>
+                {input.destinationPortOrCity || 'Destination Location'}
               </span>
             </div>
           </div>

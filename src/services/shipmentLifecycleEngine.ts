@@ -1,4 +1,4 @@
-export type TransportMode = 'Air' | 'FCL' | 'LCL' | 'Road';
+export type TransportMode = 'Air' | 'FCL' | 'LCL' | 'Road' | 'Ship';
 export type ServiceType = 'Door-to-Door' | 'Door-to-Port' | 'Port-to-Door' | 'Port-to-Port';
 export type DocumentImportance = 'mandatory' | 'regulatory' | 'recommended';
 

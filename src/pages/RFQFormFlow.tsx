@@ -61,7 +61,7 @@ export const RFQFormFlow: React.FC = () => {
         <aside className="rfq-left-pane">
           <ShipmentLifecycleRouteCard
             input={{
-              transportMode: formData.mode === 'Air' ? 'Air' : formData.load_type === 'LCL' ? 'LCL' : 'FCL',
+              transportMode: formData.mode === 'Air' ? 'Air' : 'Ship',
               serviceType:
                 formData.service_scope === 'D2D'
                   ? 'Door-to-Door'

@@ -19,8 +19,47 @@ import {
   calculateVolumetricWeight,
   calculateChargeableWeightKg,
 } from '../../utils/rfqCalculations';
-import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, PackageCheck, Layers, Scale, Sparkles, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, IndianRupee, Euro, PoundSterling, JapaneseYen, PackageCheck, Layers, Scale, Sparkles, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import './Step2CargoPackages.css';
+
+const getCurrencySymbol = (currency: string = 'USD'): string => {
+  switch (currency?.toUpperCase()) {
+    case 'INR': return '₹';
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    case 'JPY':
+    case 'CNY': return '¥';
+    case 'CAD': return 'C$';
+    case 'AUD': return 'A$';
+    case 'AED': return 'AED';
+    case 'SGD': return 'S$';
+    case 'USD':
+    default: return '$';
+  }
+};
+
+const getCurrencyIconNode = (currency: string = 'USD') => {
+  const code = currency?.toUpperCase();
+  switch (code) {
+    case 'INR':
+      return <IndianRupee size={16} />;
+    case 'EUR':
+      return <Euro size={16} />;
+    case 'GBP':
+      return <PoundSterling size={16} />;
+    case 'JPY':
+    case 'CNY':
+      return <JapaneseYen size={16} />;
+    case 'USD':
+      return <DollarSign size={16} />;
+    default:
+      return (
+        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', lineHeight: 1 }}>
+          {getCurrencySymbol(code)}
+        </span>
+      );
+  }
+};
 
 interface Step2CargoPackagesProps {
   formData: RFQFormData;
@@ -544,18 +583,20 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             name="primary_item_qty"
             value={primaryItem.quantity || ''}
             onChange={(e) => handlePrimaryItemChange('quantity', e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+            error={errors.primary_item_qty}
             helperText="Item unit count"
           />
 
           <FormInput
             type="number"
             min={0}
-            label="Unit Price ($) *"
+            label={`Unit Price (${getCurrencySymbol(formData.currency)}) *`}
             name="primary_item_unit_price"
             value={primaryItem.unitPrice || ''}
             onChange={(e) => handlePrimaryItemChange('unitPrice', e.target.value === '' ? '' : Number(e.target.value))}
-            icon={<DollarSign size={16} />}
-            helperText="Price per individual unit"
+            error={errors.primary_item_unit_price}
+            icon={getCurrencyIconNode(formData.currency)}
+            helperText={`Price per individual unit in ${formData.currency || 'USD'}`}
           />
 
           <FormInput
@@ -565,6 +606,7 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             name="primary_item_net_weight"
             value={primaryItem.netWeight || ''}
             onChange={(e) => handlePrimaryItemChange('netWeight', e.target.value === '' ? '' : Number(e.target.value))}
+            error={errors.primary_item_net_weight}
             icon={<Scale size={16} />}
             helperText="Net weight per individual unit (excl. packaging)"
           />
@@ -574,23 +616,31 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
         <div className="grid-3col" style={{ gap: '1.25rem' }}>
           <FormInput
             type="number"
-            label="Total Commercial Value *"
+            label={`Total Commercial Value (${getCurrencySymbol(formData.currency)}) *`}
             name="cargo_value"
             value={formData.cargo_value || ''}
             onChange={(e) => onSetFieldValue('cargo_value', e.target.value === '' ? '' : Number(e.target.value))}
             error={errors.cargo_value}
-            icon={<DollarSign size={16} />}
+            icon={getCurrencyIconNode(formData.currency)}
             helperText="Total invoice valuation (Auto-calculated: Qty × Unit Price)"
           />
 
           <FormSelect
             label="Currency *"
             name="currency"
-            value={formData.currency}
+            value={formData.currency || 'USD'}
             onChange={(e) => onSetFieldValue('currency', e.target.value)}
             options={[
-              { value: 'USD', label: 'USD - US Dollar' },
-              { value: 'INR', label: 'INR - Indian Rupee' },
+              { value: 'USD', label: 'USD - US Dollar ($)' },
+              { value: 'INR', label: 'INR - Indian Rupee (₹)' },
+              { value: 'EUR', label: 'EUR - Euro (€)' },
+              { value: 'GBP', label: 'GBP - British Pound (£)' },
+              { value: 'AED', label: 'AED - UAE Dirham (AED)' },
+              { value: 'SGD', label: 'SGD - Singapore Dollar (S$)' },
+              { value: 'CAD', label: 'CAD - Canadian Dollar (C$)' },
+              { value: 'AUD', label: 'AUD - Australian Dollar (A$)' },
+              { value: 'JPY', label: 'JPY - Japanese Yen (¥)' },
+              { value: 'CNY', label: 'CNY - Chinese Yuan (¥)' },
             ]}
             error={errors.currency}
           />
@@ -657,7 +707,7 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                     <th style={{ padding: '0.75rem 1rem' }}>SKU Description</th>
                     <th style={{ padding: '0.75rem 0.75rem', width: '130px' }}>HS Code</th>
                     <th style={{ padding: '0.75rem 0.75rem', width: '90px', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '0.75rem 0.75rem', width: '140px' }}>Unit Price ($)</th>
+                    <th style={{ padding: '0.75rem 0.75rem', width: '140px' }}>Unit Price ({getCurrencySymbol(formData.currency)})</th>
                     <th style={{ padding: '0.75rem 0.75rem', width: '140px' }}>Net Wt/Unit (kg)</th>
                     <th style={{ padding: '0.75rem 0.75rem', width: '60px', textAlign: 'center' }}>Action</th>
                   </tr>
@@ -742,6 +792,12 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             Add Package Line
           </Button>
         </div>
+
+        {errors.packages && (
+          <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', color: '#b91c1c', padding: '0.65rem 0.85rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.82rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span>⚠️</span> {errors.packages}
+          </div>
+        )}
 
         {/* Logistics Weight & Volume Metrics Breakdown Summary Banner */}
         <div
@@ -1012,6 +1068,10 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
               let remainingVol = totalVolumeCbm;
               let remainingWeight = totalGrossWeight;
               const totalItems = formData.commercial_items.reduce((acc, item) => acc + (Number(item.quantity) || 1), 0) || 48;
+              let remainingItems = totalItems;
+
+              const totalContainersInMix = aiRecommendation.equipmentMix.totalFleetCount;
+              const densityKgPerCbm = totalVolumeCbm > 0 ? totalGrossWeight / totalVolumeCbm : 0;
 
               let globalIdx = 0;
               aiRecommendation.equipmentMix.mix.forEach((mixItem) => {
@@ -1020,10 +1080,30 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                   const spec = mixItem.spec;
                   const maxVol = spec.cbmCapacity;
                   const maxWeight = spec.maxPayloadKg;
+                  const isLast = globalIdx === totalContainersInMix;
 
-                  const volForThis = Math.min(remainingVol, maxVol * 0.92);
-                  const weightForThis = totalVolumeCbm > 0 ? (volForThis / totalVolumeCbm) * totalGrossWeight : Math.min(remainingWeight, maxWeight * 0.85);
-                  const itemsForThis = totalVolumeCbm > 0 ? Math.round((volForThis / totalVolumeCbm) * totalItems) : Math.ceil(totalItems / aiRecommendation.equipmentMix.totalFleetCount);
+                  // 1. Determine volume limits based on both container CBM capacity and payload weight cap
+                  const volCapByVolume = maxVol * 0.92;
+                  const volCapByWeight = densityKgPerCbm > 0 ? maxWeight / densityKgPerCbm : Infinity;
+                  const maxVolAllowed = Math.min(volCapByVolume, volCapByWeight);
+
+                  const volForThis = isLast ? remainingVol : Math.min(remainingVol, maxVolAllowed);
+
+                  // 2. Determine weight allocation capped by container max payload kg
+                  const weightByVol = totalVolumeCbm > 0 ? (volForThis / totalVolumeCbm) * totalGrossWeight : 0;
+                  const weightForThis = isLast
+                    ? remainingWeight
+                    : Math.min(remainingWeight, Math.min(maxWeight, weightByVol > 0 ? weightByVol : maxWeight * 0.85));
+
+                  // 3. Determine item allocation based on weight ratio & remaining items
+                  let itemsForThis = isLast
+                    ? remainingItems
+                    : (totalGrossWeight > 0
+                        ? Math.round((weightForThis / totalGrossWeight) * totalItems)
+                        : Math.round(totalItems / totalContainersInMix));
+
+                  itemsForThis = Math.max(0, Math.min(remainingItems, itemsForThis));
+                  if (isLast) itemsForThis = remainingItems;
 
                   const volUtil = Math.min(100, Math.round((volForThis / maxVol) * 100));
                   const weightUtil = Math.min(100, Math.round((weightForThis / maxWeight) * 100));
@@ -1033,13 +1113,14 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                     spec,
                     volAllocated: volForThis,
                     weightAllocated: Math.round(weightForThis),
-                    itemCount: Math.max(1, itemsForThis),
+                    itemCount: Math.max(itemsForThis > 0 ? itemsForThis : (isLast ? remainingItems : 0), 0),
                     volUtilization: volUtil,
                     weightUtilization: weightUtil,
                   });
 
                   remainingVol = Math.max(0, remainingVol - volForThis);
                   remainingWeight = Math.max(0, remainingWeight - weightForThis);
+                  remainingItems = Math.max(0, remainingItems - itemsForThis);
                 }
               });
 
@@ -1057,7 +1138,7 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.04)',
                   }}
                 >
-                  {/* Top Bar: Container Tabs + Name + Item Count */}
+                  {/* Top Bar: Container Tabs on Left, Items Allocated + Active Container Name on Right */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                       {/* Numbered Container Selector Pills */}
@@ -1090,10 +1171,6 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                           );
                         })}
                       </div>
-
-                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
-                        {activeContainer.spec.name}
-                      </span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -1101,29 +1178,9 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                         📦 {activeContainer.itemCount} items allocated
                       </span>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSetFieldValue('container_type', aiRecommendation.containerType);
-                          onSetFieldValue('container_count', aiRecommendation.containerCount);
-                        }}
-                        style={{
-                          background: '#2563eb',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '0.35rem 0.75rem',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          boxShadow: '0 2px 4px rgba(37, 99, 235, 0.15)',
-                        }}
-                      >
-                        ✨ Apply AI Fleet Mix ({aiRecommendation.containerCount} Containers)
-                      </button>
+                      <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                        {activeContainer.spec.name}
+                      </span>
                     </div>
                   </div>
 

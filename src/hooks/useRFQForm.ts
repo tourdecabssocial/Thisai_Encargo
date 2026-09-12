@@ -301,11 +301,54 @@ export function useRFQForm() {
     }
 
     if (step === 2) {
-      if (!formData.commodity_description.trim()) {
+      // 1. Commodity Description (Mandatory)
+      if (!formData.commodity_description || !formData.commodity_description.trim()) {
         newErrors.commodity_description = 'Commodity description is required.';
       }
-      if (!formData.cargo_value || formData.cargo_value <= 0) {
+
+      // 2. Primary Item Quantity, Unit Price, and Net Weight (Mandatory)
+      const primaryItem = formData.commercial_items[0];
+      if (!primaryItem?.quantity || primaryItem.quantity < 1) {
+        newErrors.primary_item_qty = 'Quantity must be at least 1 unit.';
+      }
+      if (primaryItem?.unitPrice === undefined || primaryItem.unitPrice === null || primaryItem.unitPrice < 0) {
+        newErrors.primary_item_unit_price = 'Unit price must be 0 or greater.';
+      }
+      if (!primaryItem?.netWeight || primaryItem.netWeight <= 0) {
+        newErrors.primary_item_net_weight = 'Net weight per unit is required (must be > 0 kg).';
+      }
+
+      // 3. Total Cargo Commercial Value (Mandatory > 0)
+      if (formData.cargo_value === undefined || formData.cargo_value === null || formData.cargo_value <= 0) {
         newErrors.cargo_value = 'Total commercial value must be greater than zero.';
+      }
+
+      // 4. Currency (Mandatory)
+      if (!formData.currency) {
+        newErrors.currency = 'Currency selection is required.';
+      }
+
+      // 5. Load Type (Mandatory)
+      if (!formData.load_type) {
+        newErrors.load_type = 'Load type selection is required.';
+      }
+
+      // 6. Package Dimensions & Line Validation (Mandatory > 0)
+      const invalidPackage = formData.packages.find(
+        (pkg) => !pkg.quantity || pkg.quantity < 1 || !pkg.length || pkg.length <= 0 || !pkg.width || pkg.width <= 0 || !pkg.height || pkg.height <= 0
+      );
+      if (invalidPackage) {
+        newErrors.packages = 'All package lines must have valid Quantity (≥ 1) and Dimensions (L, W, H > 0 cm).';
+      }
+
+      // 7. HAZMAT UN Class Validation if hazardous materials is checked
+      if (formData.hazardous_materials && (!formData.un_class_code || !formData.un_class_code.trim())) {
+        newErrors.un_class_code = 'UN Class / Code is required for hazardous materials.';
+      }
+
+      // 8. Temperature Control Validation if temp control is checked
+      if (formData.temperature_control_required && (!formData.target_temperature || !String(formData.target_temperature).trim())) {
+        newErrors.target_temperature = 'Target temperature specification is required (e.g. -18°C or 2-8°C).';
       }
     }
 

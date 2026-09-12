@@ -373,50 +373,53 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
 
         {/* 4. International Commercial Terms (Incoterms) */}
         <div className="section-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.90rem' }}>
+          <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem', fontSize: '0.90rem' }}>
             <FileCheck size={16} className="text-indigo" /> 4. Incoterms
           </h3>
 
-          <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
-            <div style={{ flex: 1 }}>
-              <FormSelect
-                label="Incoterm *"
-                name="incoterm"
-                value={formData.incoterm}
-                onChange={onChange}
-                options={allowedIncoterms.map((inc) => ({ value: inc, label: inc }))}
-                error={errors.incoterm}
-              />
-            </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <FormSelect
+              label="Incoterm *"
+              name="incoterm"
+              value={formData.incoterm}
+              onChange={onChange}
+              options={allowedIncoterms.map((inc) => {
+                const map: Record<string, string> = {
+                  DDP: 'DDP - Delivered Duty Paid',
+                  DAP: 'DAP - Delivered at Place',
+                  DPU: 'DPU - Delivered at Place Unloaded',
+                  EXW: 'EXW - Ex Works',
+                  FOB: 'FOB - Free on Board',
+                  CIF: 'CIF - Cost, Insurance & Freight',
+                  CFR: 'CFR - Cost & Freight',
+                  FCA: 'FCA - Free Carrier',
+                  CPT: 'CPT - Carriage Paid To',
+                  CIP: 'CIP - Carriage & Insurance Paid',
+                };
+                return { value: inc, label: map[inc] || inc };
+              })}
+              error={errors.incoterm}
+            />
 
             <div
               style={{
-                padding: '0.45rem 0.6rem',
+                marginTop: '0.35rem',
+                padding: '0.4rem 0.65rem',
                 background: '#f8fafc',
                 borderRadius: '8px',
                 border: '1px solid #cbd5e1',
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '0.2rem',
-                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.75rem',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.76rem', color: '#1e293b' }}>
-                  Rule Scope:
-                </span>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#2563eb', background: '#dbeafe', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                  {formData.service_scope}
-                </span>
-              </div>
-              <p style={{ fontSize: '0.74rem', color: '#475569', margin: 0 }}>
-                Selected: <strong style={{ color: '#0f172a' }}>{formData.incoterm}</strong>
-              </p>
-              {['CIF', 'CIP'].includes(formData.incoterm) && (
-                <span style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                  <CheckCircle2 size={12} /> Mandatory Cargo Insurance
-                </span>
-              )}
+              <span style={{ color: '#475569', fontWeight: 600 }}>
+                Selected Rule Scope: <strong style={{ color: '#0f172a' }}>{formData.service_scope}</strong>
+              </span>
+              <span style={{ fontSize: '0.70rem', fontWeight: 800, color: ['CIF', 'CIP'].includes(formData.incoterm) ? '#059669' : '#2563eb', background: ['CIF', 'CIP'].includes(formData.incoterm) ? '#d1fae5' : '#dbeafe', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                {['CIF', 'CIP'].includes(formData.incoterm) ? '✓ Marine Insurance' : `${formData.incoterm} Active`}
+              </span>
             </div>
           </div>
         </div>

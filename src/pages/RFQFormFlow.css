@@ -1,46 +1,48 @@
 .rfq-flow-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.75rem;
   width: 100%;
 }
 
 .rfq-flow-header {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.1rem;
 }
 
 .rfq-title-group {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.15rem;
 }
 
 .rfq-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.75rem;
+  gap: 0.35rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: #2563eb;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   background: #dbeafe;
   border: 1px solid #bfdbfe;
-  padding: 0.3rem 0.75rem;
+  padding: 0.15rem 0.5rem;
   border-radius: var(--radius-sm);
   width: fit-content;
 }
 
 .rfq-main-title {
-  font-size: 2.1rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .rfq-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   color: #64748b;
+  line-height: 1.3;
 }
 
 .rfq-flow-grid {
