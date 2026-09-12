@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRFQForm } from '../hooks/useRFQForm';
 import { StepIndicator } from '../components/form/StepIndicator';
+import { ShipmentFlowVisualizer } from '../components/rfq/ShipmentFlowVisualizer';
 import { Step1RouteScope } from '../components/rfq/Step1RouteScope';
 import { Step2CargoPackages } from '../components/rfq/Step2CargoPackages';
 import { Step3ContainerLoadConfig } from '../components/rfq/Step3ContainerLoadConfig';
@@ -54,6 +55,15 @@ export const RFQFormFlow: React.FC = () => {
 
       {/* Step Indicator */}
       <StepIndicator currentStep={activeStep} onStepClick={(step) => setActiveStep(step)} />
+
+      {/* End-to-End Visual Shipment Flow Diagram (Adapts to Transport Mode & Scope) */}
+      <ShipmentFlowVisualizer
+        mode={formData.mode}
+        serviceScope={formData.service_scope}
+        originName={formData.origin_port_name || formData.from_port_name}
+        destName={formData.destination_port_name || formData.to_port_name}
+        currentStep={activeStep}
+      />
 
       {/* Main Flow Layout: Left Route Planner + Form Wizard + Right Live Summary */}
       <div className="rfq-flow-grid">
