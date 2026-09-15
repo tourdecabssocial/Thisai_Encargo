@@ -1,5 +1,4 @@
-import type { CommercialItem, PhysicalState } from '../types/rfq';
-import type { CargoForm } from '../types/aiEquipment';
+import type { PhysicalState, CargoForm } from '../types/aiEquipment';
 
 export interface HSCodeSuggestion {
   hsCode: string;
@@ -66,7 +65,7 @@ export const classifyHSCodeReefAPI = async (
 
   const apiKey = customApiKey || (import.meta as any).env?.VITE_REEF_KEY || 'ak_live_mnbvzNOvslBkrIr-06SNdS9AhLQHhkRZ';
 
-  // 1. Try local proxy endpoint (/api/reef-classify) first to bypass browser CORS preflight (OPTIONS 405) errors
+  // 1. Try proxy endpoint (/api/reef-classify) first to bypass browser CORS rules
   try {
     const proxyRes = await fetch('/api/reef-classify', {
       method: 'POST',
@@ -87,16 +86,17 @@ export const classifyHSCodeReefAPI = async (
       }
     }
   } catch {
-    // Proxy unavailable (e.g. static host), continue to direct fetch
+    // Proxy endpoint unavailable on static server, fall through to fallback
   }
 
-  // 2. Direct fetch fallback
+  // 2. Direct fetch fallback with Authorization Bearer header (CORS compliant)
   if (apiKey) {
     try {
       const response = await fetch('https://api.reefapi.com/hs-code/v1/classify', {
         method: 'POST',
         headers: {
-          'content-type': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
           'x-api-key': apiKey,
         },
         body: JSON.stringify({

@@ -5,7 +5,7 @@ import { FormInput } from '../form/FormInput';
 import { PortAutocomplete } from '../form/PortAutocomplete';
 import { AddressAutocomplete, type ExtractedAddress } from '../form/AddressAutocomplete';
 import { mockAddresses } from '../../hooks/useRFQForm';
-import { fetchPortsWithHierarchicalFallback, fetchPortsByCity, type PortRecord } from '../../services/portSearchService';
+import { fetchPortsWithHierarchicalFallback, type PortRecord } from '../../services/portSearchService';
 import {
   Plane,
   Ship,
@@ -338,8 +338,8 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                       gap: '0.2rem',
                     }}
                   >
-                    {useSavedFrom ? <Search size={12} /> : <ListFilter size={12} />}
-                    {useSavedFrom ? 'Use OpenStreetMap Autocomplete' : 'Select Saved Address'}
+                    {/* {useSavedFrom ? <Search size={12} /> : <ListFilter size={12} />} */}
+                    {/* {useSavedFrom ? 'Use OpenStreetMap Autocomplete' : 'Select Saved Address'} */}
                   </button>
                 </div>
 
@@ -388,7 +388,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                       Origin Port for {originSearchResult.matchedLocationName || originLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
                     </label>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                      {originSearchResult.matchLevel === 'city' ? 'City Match' : originSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'}
+                      {originSearchResult.matchLevel === 'city' ? 'City Match' : originSearchResult.matchLevel === 'state' ? 'State Match' : 'Country Match'}
                     </span>
                   </div>
 
@@ -413,7 +413,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
 
                   <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 600, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <CheckCircle2 size={12} style={{ color: '#0284c7' }} />
-                    Auto-matched {originCityPorts.length} UN/LOCODE gateway port{originCityPorts.length > 1 ? 's' : ''} for {originSearchResult.matchedLocationName || originLocationLabel} ({originSearchResult.matchLevel === 'city' ? 'City Match' : originSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'})
+                    Auto-matched {originCityPorts.length} UN/LOCODE gateway port{originCityPorts.length > 1 ? 's' : ''} for {originSearchResult.matchedLocationName || originLocationLabel} ({originSearchResult.matchLevel === 'city' ? 'City Match' : originSearchResult.matchLevel === 'state' ? 'State Match' : 'Country Match'})
                   </div>
                 </div>
               </>
@@ -459,8 +459,8 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                       gap: '0.2rem',
                     }}
                   >
-                    {useSavedTo ? <Search size={12} /> : <ListFilter size={12} />}
-                    {useSavedTo ? 'Use OpenStreetMap Autocomplete' : 'Select Saved Address'}
+                    {/* {useSavedTo ? <Search size={12} /> : <ListFilter size={12} />} */}
+                    {/* {useSavedTo ? 'Use OpenStreetMap Autocomplete' : 'Select Saved Address'} */}
                   </button>
                 </div>
 
@@ -509,7 +509,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                       Destination Port for {destSearchResult.matchedLocationName || destLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
                     </label>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                      {destSearchResult.matchLevel === 'city' ? 'City Match' : destSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'}
+                      {destSearchResult.matchLevel === 'city' ? 'City Match' : destSearchResult.matchLevel === 'state' ? 'State Match' : 'Country Match'}
                     </span>
                   </div>
 
@@ -534,7 +534,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
 
                   <div style={{ fontSize: '0.68rem', color: '#0369a1', fontWeight: 600, marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <CheckCircle2 size={12} style={{ color: '#0284c7' }} />
-                    Auto-matched {destCityPorts.length} UN/LOCODE gateway port{destCityPorts.length > 1 ? 's' : ''} for {destSearchResult.matchedLocationName || destLocationLabel} ({destSearchResult.matchLevel === 'city' ? 'City Match' : destSearchResult.matchLevel === 'state' ? 'State Fallback' : 'Country Fallback'})
+                    Auto-matched {destCityPorts.length} UN/LOCODE gateway port{destCityPorts.length > 1 ? 's' : ''} for {destSearchResult.matchedLocationName || destLocationLabel} ({destSearchResult.matchLevel === 'city' ? 'City Match' : destSearchResult.matchLevel === 'state' ? 'State Match' : 'Country Match'})
                   </div>
                 </div>
               </>

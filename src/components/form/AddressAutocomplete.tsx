@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Search, Loader2, Check, Globe, Building2, Compass } from 'lucide-react';
+import { MapPin, Loader2, Globe, Building2, Compass } from 'lucide-react';
 import './AddressAutocomplete.css';
 
 export interface ExtractedAddress {
@@ -74,7 +74,7 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [selectedAddress, setSelectedAddress] = useState<ExtractedAddress | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (value && value !== inputText) {
@@ -103,19 +103,28 @@ export const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
     setIsLoading(true);
 
-    const locationIqKey = (import.meta as any).env?.VITE_LOCATIONIQ_API_KEY || 'pk.0123456789abcdef';
+    const envKey = (import.meta as any).env?.VITE_LOCATIONIQ_API_KEY;
+    const locationIqKey = envKey && !envKey.includes('0123456789') ? envKey : null;
 
     try {
-      // 1. Try LocationIQ Autocomplete API with STRICT English accept-language=en
-      const locIqUrl = `https://api.locationiq.com/v1/autocomplete?key=${locationIqKey}&q=${encodeURIComponent(query)}&format=json&addressdetails=1&accept-language=en&limit=6`;
-      let response = await fetch(locIqUrl, {
-        headers: {
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
-      });
+      let response: Response | null = null;
 
-      // 2. Fallback to OpenStreetMap Nominatim Search API with STRICT English accept-language=en
-      if (!response.ok) {
+      // 1. Try LocationIQ Autocomplete API ONLY if valid non-placeholder key exists
+      if (locationIqKey) {
+        try {
+          const locIqUrl = `https://api.locationiq.com/v1/autocomplete?key=${locationIqKey}&q=${encodeURIComponent(query)}&format=json&addressdetails=1&accept-language=en&limit=6`;
+          response = await fetch(locIqUrl, {
+            headers: {
+              'Accept-Language': 'en-US,en;q=0.9',
+            },
+          });
+        } catch {
+          response = null;
+        }
+      }
+
+      // 2. Fallback to OpenStreetMap Nominatim Search API (Free, No API Key Required)
+      if (!response || !response.ok) {
         const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&accept-language=en&limit=6`;
         response = await fetch(nominatimUrl, {
           headers: {

@@ -74,11 +74,42 @@ export const sanitizeCityToEnglish = (inputStr: string): string => {
   return text || inputStr;
 };
 
+const normalizeSubdivisionText = (text: string): string => {
+  if (!text) return '';
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+};
+
+const STATE_ALIAS_MAP: Record<string, string[]> = {
+  'tamil nadu': ['tamil nadu', 'tamilnadu', 'tn'],
+  'maharashtra': ['maharashtra', 'mh'],
+  'gujarat': ['gujarat', 'gj'],
+  'kerala': ['kerala', 'kl'],
+  'karnataka': ['karnataka', 'ka'],
+  'andhra pradesh': ['andhra pradesh', 'ap'],
+  'telangana': ['telangana', 'tg', 'ts'],
+  'west bengal': ['west bengal', 'wb', 'bengal'],
+  'odisha': ['odisha', 'orissa', 'od', 'or'],
+  'goa': ['goa', 'ga'],
+  'delhi': ['delhi', 'dl'],
+  'punjab': ['punjab', 'pb'],
+  'haryana': ['haryana', 'hr'],
+  'uttar pradesh': ['uttar pradesh', 'up'],
+  'california': ['california', 'ca'],
+  'new york': ['new york', 'ny'],
+  'texas': ['texas', 'tx'],
+  'florida': ['florida', 'fl'],
+};
+
 /**
- * 3-Tier Hierarchical Fallback Port Search Engine:
- * 1. Tier 1: Search by City
+ * 3-Tier Hierarchical Realtime Port Search Engine (Strict Matching):
+ * 1. Tier 1: Search by City (return city ports if found)
  * 2. Tier 2: Search by State / Subdivision (if 0 ports found in city)
  * 3. Tier 3: Search by Country (if 0 ports found in state)
+ * No arbitrary fallback ports from outside the target country/state!
  */
 export const fetchPortsWithHierarchicalFallback = (
   addressInput: string | { city?: string; state?: string; countryCode?: string; country?: string; label?: string } | null,
@@ -129,13 +160,23 @@ export const fetchPortsWithHierarchicalFallback = (
 
   // TIER 2: Fallback Match by State / Subdivision (if 0 ports found in city)
   if (state) {
-    const stateLower = state.toLowerCase();
+    const sNorm = normalizeSubdivisionText(state);
+    const aliases = STATE_ALIAS_MAP[sNorm] || [sNorm];
+
     const statePorts = modeFiltered.filter((p) => {
       if (countryCode && p.country.toUpperCase() !== countryCode.toUpperCase()) return false;
-      const pSub = (p.subdivision || '').toLowerCase();
-      const pSubCode = (p.subdivision_code || '').toLowerCase();
-      const pName = p.port_name.toLowerCase();
-      return pSub.includes(stateLower) || stateLower.includes(pSub) || pSubCode === stateLower;
+
+      const pSub = normalizeSubdivisionText(p.subdivision || '');
+      const pSubCode = (p.subdivision_code || '').toLowerCase().trim();
+
+      // Reject empty subdivisions to prevent matching ports in other states
+      if (!pSub && !pSubCode) return false;
+
+      return aliases.some(
+        (a) =>
+          (pSub && (pSub === a || pSub.includes(a) || a.includes(pSub))) ||
+          (pSubCode && pSubCode === a)
+      );
     });
 
     if (statePorts.length > 0) {
@@ -158,18 +199,18 @@ export const fetchPortsWithHierarchicalFallback = (
 
     if (countryPorts.length > 0) {
       return {
-        ports: countryPorts.slice(0, 20),
+        ports: countryPorts.slice(0, 30),
         matchLevel: 'country',
         matchedLocationName: countryName || countryCode || 'Country',
       };
     }
   }
 
-  // Final fallback: Mode-filtered ports
+  // Strict Realtime Policy: Return empty ports if no ports exist for city, state, or country
   return {
-    ports: modeFiltered.slice(0, 15),
+    ports: [],
     matchLevel: 'country',
-    matchedLocationName: 'Country / Region',
+    matchedLocationName: countryName || countryCode || 'No Ports Found',
   };
 };
 

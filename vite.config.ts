@@ -460,6 +460,56 @@ const reefApiProxyPlugin = (): Plugin => ({
       next();
     });
   },
+  configurePreviewServer(server) {
+    server.middlewares.use(async (req, res, next) => {
+      if (req.url?.startsWith('/api/reef-classify') && req.method === 'POST') {
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk;
+        });
+
+        req.on('end', async () => {
+          try {
+            const parsedBody = JSON.parse(body);
+            let destCountry = parsedBody.destination || 'US';
+            if (typeof destCountry === 'string' && destCountry.length > 2) {
+              destCountry = destCountry.substring(0, 2).toUpperCase();
+            }
+
+            const payload = {
+              description: parsedBody.description,
+              destination: destCountry,
+            };
+
+            const apiKey =
+              req.headers['x-api-key'] ||
+              process.env.VITE_REEF_KEY ||
+              process.env.REEF_KEY ||
+              'ak_live_mnbvzNOvslBkrIr-06SNdS9AhLQHhkRZ';
+
+            const reefRes = await fetch('https://api.reefapi.com/hs-code/v1/classify', {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                ...(apiKey ? { 'x-api-key': String(apiKey) } : {}),
+              },
+              body: JSON.stringify(payload),
+            });
+
+            const reefData = await reefRes.text();
+            res.statusCode = reefRes.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(reefData);
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ error: err.message }));
+          }
+        });
+        return;
+      }
+      next();
+    });
+  },
 });
 
 export default defineConfig(({ mode }) => {

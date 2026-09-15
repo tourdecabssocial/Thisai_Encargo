@@ -9,8 +9,11 @@ export interface TemperatureControlConfig {
   target_temp_celsius?: number | null;
 }
 
+export type PhysicalState = 'solid' | 'liquid' | 'gas' | 'machinery' | 'perishable' | 'vehicle';
 export type CargoForm = 'packaged_dry' | 'bulk_liquid' | 'bulk_gas' | 'machinery';
 export type LoadingAccess = 'standard_rear_door' | 'overhead_crane' | 'side_roll_on' | 'fragile_delicate';
+export type CommodityCategory = 'general' | 'hazardous' | 'fda_regulated' | 'agri_wood' | 'jewelry_high_value' | 'wood_pkg';
+export type HandlingRequirement = 'standard' | 'top_loading' | 'side_loading' | 'fragile_delicate';
 
 export interface AIEquipmentInput {
   cargo_volume_cbm: number;
