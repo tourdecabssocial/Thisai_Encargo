@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchFromMeiliSearch, type PortRecord } from '../../services/portSearchService';
+import { fetchFromMeiliSearch, normalizeIsAirMode, type PortRecord } from '../../services/portSearchService';
 import { Anchor, Plane, ChevronDown, Check } from 'lucide-react';
 import './FormInput.css';
 
@@ -43,6 +43,8 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isAir = normalizeIsAirMode(mode);
 
   // Sync initial input value display text
   useEffect(() => {
@@ -105,11 +107,7 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
             country: p.country,
           }));
 
-          setOptions((prev) => {
-            const existingKeys = new Set(prev.map((o) => o.value));
-            const newHits = mapped.filter((m) => !existingKeys.has(m.value));
-            return [...mapped, ...newHits];
-          });
+          setOptions(mapped);
         })
         .finally(() => setIsLoading(false));
     }, 300);
@@ -134,8 +132,6 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
     setIsOpen(false);
   };
 
-  const isAir = mode === 'Air' || mode === 'AIR';
-
   return (
     <div className="form-field" ref={dropdownRef} style={{ position: 'relative' }}>
       <label className="field-label" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -143,14 +139,14 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
       </label>
 
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-        <div style={{ position: 'absolute', left: '0.75rem', color: '#64748b', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', left: '0.75rem', color: isAir ? '#2563eb' : '#0891b2', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
           {icon || (isAir ? <Plane size={16} /> : <Anchor size={16} />)}
         </div>
 
         <input
           type="text"
           value={inputValue}
-          placeholder={placeholder || (isAir ? 'Search Airport by UN/LOCODE or Name (e.g. MAA, JFK)...' : 'Search Seaport by UN/LOCODE or Name (e.g. INMAA, USNYC)...')}
+          placeholder={placeholder || (isAir ? 'Search Airport by UN/LOCODE, Name or City (e.g. MAA, JFK)...' : 'Search Seaport by UN/LOCODE, Name or City (e.g. INMAA, USNYC)...')}
           onChange={(e) => {
             setInputValue(e.target.value);
             setIsOpen(true);
@@ -166,7 +162,7 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
             color: '#0f172a',
             background: '#ffffff',
             outline: 'none',
-            boxShadow: isOpen ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
+            boxShadow: isOpen ? `0 0 0 3px ${isAir ? 'rgba(37, 99, 235, 0.15)' : 'rgba(8, 145, 178, 0.15)'}` : 'none',
           }}
         />
 
@@ -196,8 +192,8 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
             overflowY: 'auto',
           }}
         >
-          <div style={{ padding: '0.4rem 0.75rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.73rem', fontWeight: 700, color: '#475569' }}>
-            <span>{isAir ? '✈️ Air Terminals (Function 4)' : '⚓ Sea Ports (Function 1)'}</span>
+          <div style={{ padding: '0.4rem 0.75rem', background: isAir ? '#eff6ff' : '#ecfeff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.73rem', fontWeight: 700, color: isAir ? '#1d4ed8' : '#0e7490' }}>
+            <span>{isAir ? '✈️ Air Terminals & International Airports (Mode: Air)' : '⚓ Sea Ports & Maritime Terminals (Mode: Ship)'}</span>
             {isLoading && <span style={{ color: '#2563eb' }}>Searching...</span>}
           </div>
 
@@ -214,7 +210,7 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: isSelected ? '#eff6ff' : '#ffffff',
+                    background: isSelected ? (isAir ? '#eff6ff' : '#ecfeff') : '#ffffff',
                     borderBottom: '1px solid #f1f5f9',
                     fontSize: '0.85rem',
                     transition: 'background 0.15s ease',
@@ -227,20 +223,20 @@ export const PortAutocomplete: React.FC<PortAutocompleteProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span style={{ fontWeight: 800, color: '#1d4ed8', background: '#dbeafe', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    <span style={{ fontWeight: 800, color: isAir ? '#1d4ed8' : '#0891b2', background: isAir ? '#dbeafe' : '#cff4fc', padding: '0.15rem 0.45rem', borderRadius: '4px', fontSize: '0.75rem' }}>
                       {opt.value}
                     </span>
                     <span style={{ fontWeight: 600, color: '#1e293b' }}>
                       {opt.name} {opt.country ? `(${opt.country})` : ''}
                     </span>
                   </div>
-                  {isSelected && <Check size={16} style={{ color: '#2563eb' }} />}
+                  {isSelected && <Check size={16} style={{ color: isAir ? '#2563eb' : '#0891b2' }} />}
                 </div>
               );
             })
           ) : (
             <div style={{ padding: '0.85rem', textAlign: 'center', fontSize: '0.825rem', color: '#64748b' }}>
-              No matching ports found. Type custom UN/LOCODE directly.
+              No matching {isAir ? 'airports' : 'sea ports'} found. Type custom UN/LOCODE directly.
             </div>
           )}
         </div>

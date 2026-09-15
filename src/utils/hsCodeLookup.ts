@@ -65,7 +65,7 @@ export const classifyHSCodeReefAPI = async (
 
   const apiKey = customApiKey || (import.meta as any).env?.VITE_REEF_KEY || 'ak_live_mnbvzNOvslBkrIr-06SNdS9AhLQHhkRZ';
 
-  // 1. Try proxy endpoint (/api/reef-classify) first to bypass browser CORS rules
+  // 1. Try reverse proxy endpoint (/api/reef-classify) first (Works in Node dev, preview & Nginx production proxy)
   try {
     const proxyRes = await fetch('/api/reef-classify', {
       method: 'POST',
@@ -86,7 +86,7 @@ export const classifyHSCodeReefAPI = async (
       }
     }
   } catch {
-    // Proxy endpoint unavailable on static server, fall through to fallback
+    // Proxy endpoint unavailable
   }
 
   // 2. Direct fetch fallback with Authorization Bearer header (CORS compliant)

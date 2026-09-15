@@ -104,22 +104,34 @@ const STATE_ALIAS_MAP: Record<string, string[]> = {
   'florida': ['florida', 'fl'],
 };
 
+export const normalizeIsAirMode = (mode?: string | null): boolean => {
+  if (!mode) return false;
+  const m = mode.trim().toLowerCase();
+  return m === 'air' || m === 'airports' || m === 'air_freight' || m === 'airfreight' || m === 'a';
+};
+
 /**
- * 3-Tier Hierarchical Realtime Port Search Engine (Strict Matching):
- * 1. Tier 1: Search by City (return city ports if found)
+ * 3-Tier Hierarchical Realtime Port Search Engine (Strict Matching & Mode Filtered):
+ * 1. Tier 1: Search by City (return city ports matching transport mode)
  * 2. Tier 2: Search by State / Subdivision (if 0 ports found in city)
  * 3. Tier 3: Search by Country (if 0 ports found in state)
- * No arbitrary fallback ports from outside the target country/state!
+ * Mode Filtering: If mode is Air, returns ONLY airports (is_air_port: true).
+ *                 If mode is Ship/Ocean, returns ONLY seaports (is_sea_port: true).
  */
 export const fetchPortsWithHierarchicalFallback = (
   addressInput: string | { city?: string; state?: string; countryCode?: string; country?: string; label?: string } | null,
   mode?: string | null
 ): PortSearchResult => {
-  if (!addressInput) {
-    return { ports: [], matchLevel: 'city', matchedLocationName: '' };
-  }
+  const isAir = normalizeIsAirMode(mode);
+  const modeFiltered = UNLOCODE_CSV_DATASET.filter((p) => (isAir ? p.is_air_port : p.is_sea_port));
 
-  const isAir = mode === 'AIR' || mode === 'Air';
+  if (!addressInput) {
+    return {
+      ports: modeFiltered.slice(0, 30),
+      matchLevel: 'country',
+      matchedLocationName: isAir ? 'Featured Air Terminals' : 'Featured Sea Ports',
+    };
+  }
 
   let city = '';
   let state = '';
@@ -140,8 +152,6 @@ export const fetchPortsWithHierarchicalFallback = (
 
   city = sanitizeCityToEnglish(city);
   state = sanitizeCityToEnglish(state);
-
-  const modeFiltered = UNLOCODE_CSV_DATASET.filter((p) => (isAir ? p.is_air_port : p.is_sea_port));
 
   // TIER 1: Match by City
   if (city) {
@@ -206,11 +216,11 @@ export const fetchPortsWithHierarchicalFallback = (
     }
   }
 
-  // Strict Realtime Policy: Return empty ports if no ports exist for city, state, or country
+  // Strict Realtime Policy: Return top mode-filtered ports if location is generic or unmapped
   return {
-    ports: [],
+    ports: modeFiltered.slice(0, 30),
     matchLevel: 'country',
-    matchedLocationName: countryName || countryCode || 'No Ports Found',
+    matchedLocationName: countryName || countryCode || (isAir ? 'Airports' : 'Sea Ports'),
   };
 };
 
@@ -240,19 +250,41 @@ export const findPortsFromAddress = (
 
 /**
  * Searches ports dynamically via FastAPI backend if running, with full fallback to UN/LOCODE CSV dataset.
+ * Supports flexible signature: (query, countryCode, subdivisionCode, mode) or (query, mode, countryCode).
  */
 export const fetchFromMeiliSearch = async (
   query: string,
-  mode: 'Air' | 'Ocean' | string = 'Ocean',
-  countryCode?: string
+  arg2?: string | null,
+  arg3?: string | null,
+  arg4?: string | null
 ): Promise<PortRecord[]> => {
-  if (!query || query.trim().length === 0) return [];
-  const cleanQuery = query.trim();
-  const isAir = mode === 'Air';
+  let countryCode: string | undefined;
+  let subdivisionCode: string | undefined;
+  let mode: string | undefined;
+
+  if (arg4 !== undefined) {
+    // Signature: (query, countryCode, subdivisionCode, mode)
+    countryCode = arg2 || undefined;
+    subdivisionCode = arg3 || undefined;
+    mode = arg4 || undefined;
+  } else if (arg2 && (normalizeIsAirMode(arg2) || arg2.toLowerCase() === 'ship' || arg2.toLowerCase() === 'ocean' || arg2.toLowerCase() === 'sea')) {
+    // Signature: (query, mode, countryCode)
+    mode = arg2 || undefined;
+    countryCode = arg3 || undefined;
+  } else {
+    // Default Signature: (query, countryCode, subdivisionCode, mode)
+    countryCode = arg2 || undefined;
+    subdivisionCode = arg3 || undefined;
+    mode = arg4 || undefined;
+  }
+
+  const cleanQuery = (query || '').trim();
+  const isAir = normalizeIsAirMode(mode);
 
   try {
     const params = new URLSearchParams({ q: cleanQuery, mode: isAir ? 'AIR' : 'SEA' });
     if (countryCode) params.append('country', countryCode);
+    if (subdivisionCode) params.append('subdivision', subdivisionCode);
 
     const res = await fetch(`http://127.0.0.1:8000/api/port?${params.toString()}`);
     if (res.ok) {
@@ -272,7 +304,14 @@ export const fetchFromMeiliSearch = async (
     // API offline, fallback to client UN/LOCODE CSV dataset
   }
 
-  // Fallback: Client-side UN/LOCODE search
-  const result = fetchPortsWithHierarchicalFallback(cleanQuery, mode);
+  // Fallback: Client-side UN/LOCODE search strictly mode-filtered
+  const result = fetchPortsWithHierarchicalFallback(
+    {
+      city: cleanQuery,
+      countryCode: countryCode || undefined,
+      state: subdivisionCode || undefined,
+    },
+    mode
+  );
   return result.ports;
 };

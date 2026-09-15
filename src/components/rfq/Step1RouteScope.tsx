@@ -385,7 +385,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                     <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <Compass size={14} className="text-sky-600" />
-                      Origin Port for {originSearchResult.matchedLocationName || originLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
+                      Port for {originSearchResult.matchedLocationName || originLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
                     </label>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
                       {originSearchResult.matchLevel === 'city' ? 'City Match' : originSearchResult.matchLevel === 'state' ? 'State Match' : 'Country Match'}
@@ -506,7 +506,7 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                     <label style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                       <Compass size={14} className="text-sky-600" />
-                      Destination Port for {destSearchResult.matchedLocationName || destLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
+                      Port for {destSearchResult.matchedLocationName || destLocationLabel} ({formData.mode === 'Air' ? 'Airports' : 'Sea Ports'}) *
                     </label>
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, background: '#e0f2fe', color: '#0284c7', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
                       {destSearchResult.matchLevel === 'city' ? 'City Match' : destSearchResult.matchLevel === 'state' ? 'State Match' : 'Country Match'}
