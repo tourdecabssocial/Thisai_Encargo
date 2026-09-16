@@ -1,6 +1,5 @@
 import React from 'react';
 import { useRFQForm, mockAddresses } from '../hooks/useRFQForm';
-import { StepIndicator } from '../components/form/StepIndicator';
 import { ShipmentFlowVisualizer } from '../components/rfq/ShipmentFlowVisualizer';
 import { Step1RouteScope } from '../components/rfq/Step1RouteScope';
 import { Step2CargoPackages } from '../components/rfq/Step2CargoPackages';
@@ -9,14 +8,13 @@ import { RFQSummarySidebar } from '../components/rfq/RFQSummarySidebar';
 import { ShipmentLifecycleRouteCard } from '../components/rfq/ShipmentLifecycleRouteCard';
 import { RFQSubmissionReport } from '../components/rfq/RFQSubmissionReport';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, ArrowRight, Send, Layers } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send, Layers, Check } from 'lucide-react';
 import './RFQFormFlow.css';
 
 export const RFQFormFlow: React.FC = () => {
   const {
     formData,
     activeStep,
-    setActiveStep,
     errors,
     isSubmitting,
     isSubmitted,
@@ -30,6 +28,7 @@ export const RFQFormFlow: React.FC = () => {
     setFieldValue,
     nextStep,
     prevStep,
+    handleGoToStep,
     handleSubmit,
     resetForm,
   } = useRFQForm();
@@ -79,9 +78,6 @@ export const RFQFormFlow: React.FC = () => {
         </div>
       </div>
 
-      {/* Step Indicator */}
-      <StepIndicator currentStep={activeStep} onStepClick={(step) => setActiveStep(step)} />
-
       {/* End-to-End Visual Shipment Flow Diagram (Adapts to Transport Mode & Scope) */}
       <div className="rfq-flow-visualizer-sticky-wrapper">
         <ShipmentFlowVisualizer
@@ -127,7 +123,28 @@ export const RFQFormFlow: React.FC = () => {
               {activeStep === 2 && 'Step 2: Commodity, Load & Container Specs'}
               {activeStep === 3 && 'Step 3: Insurance, Customs Brokers & Special Instructions'}
             </h2>
-            <span className="step-count">Step {activeStep} of 3</span>
+
+            {/* Compact 1 -> 2 -> 3 Inline Step Flow */}
+            <div className="tiny-step-flow">
+              {[1, 2, 3].map((stepNum, idx) => {
+                const isCompleted = activeStep > stepNum;
+                const isActive = activeStep === stepNum;
+
+                return (
+                  <React.Fragment key={stepNum}>
+                    <button
+                      type="button"
+                      className={`tiny-step-node ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                      onClick={() => handleGoToStep(stepNum)}
+                      title={`Go to Step ${stepNum}`}
+                    >
+                      {isCompleted ? <Check size={12} /> : stepNum}
+                    </button>
+                    {idx < 2 && <span className="tiny-step-arrow">→</span>}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
 
           <div className="rfq-card-body">

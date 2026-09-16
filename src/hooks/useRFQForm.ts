@@ -370,10 +370,20 @@ export function useRFQForm() {
     setActiveStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleGoToStep = (step: number) => {
-    if (step < activeStep || validateStep(activeStep)) {
-      setActiveStep(step);
+  const handleGoToStep = (targetStep: number) => {
+    if (targetStep === activeStep) return;
+    if (targetStep < activeStep) {
+      setActiveStep(targetStep);
+      return;
     }
+
+    for (let s = activeStep; s < targetStep; s++) {
+      if (!validateStep(s)) {
+        setActiveStep(s);
+        return;
+      }
+    }
+    setActiveStep(targetStep);
   };
 
   const totalVolumeCbm = calculateTotalVolumeCbm(formData.packages, formData.unit_system);
