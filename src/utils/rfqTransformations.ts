@@ -8,7 +8,12 @@ import {
 export const transformRFQPayload = (formData: RFQFormData): RFQSubmissionPayload => {
   const totalVolumeCbm = calculateTotalVolumeCbm(formData.packages, formData.unit_system);
   const totalGrossWeightKg = calculateTotalGrossWeightKg(formData.packages, formData.unit_system);
-  const volumetricWeight = calculateVolumetricWeight(totalVolumeCbm, formData.unit_system);
+  const { volumetricWeightKg } = calculateVolumetricWeight(
+    totalVolumeCbm,
+    formData.mode,
+    formData.load_type,
+    formData.unit_system
+  );
 
   const originStr = formData.from_port_code
     ? `${formData.from_port_name || 'Port'} (${formData.from_port_code})`
@@ -45,12 +50,14 @@ export const transformRFQPayload = (formData: RFQFormData): RFQSubmissionPayload
     commodity_description: formData.commodity_description || undefined,
     total_volume_cbm: Number(totalVolumeCbm.toFixed(3)),
     total_gross_weight_kg: Number(totalGrossWeightKg.toFixed(2)),
-    volumetric_weight: Number(volumetricWeight.toFixed(2)),
+    volumetric_weight: Number(volumetricWeightKg.toFixed(2)),
     cargo_value: formData.cargo_value || 0,
     currency: formData.currency,
     temperature_control_required: formData.temperature_control_required,
     target_temperature: formData.temperature_control_required ? formData.target_temperature : undefined,
     insurance_required: formData.insurance_required,
+    insurance_provider_type: formData.insurance_required ? (formData.insurance_provider_type || 'thisai') : undefined,
+    insurance_instructions: formData.insurance_required && formData.insurance_provider_type === 'customer_external' ? formData.insurance_instructions : undefined,
     origin_customs_clearance: formData.origin_customs_clearance,
     origin_customs_broker: formData.origin_customs_clearance ? formData.origin_customs_broker : undefined,
     destination_customs_clearance: formData.destination_customs_clearance,

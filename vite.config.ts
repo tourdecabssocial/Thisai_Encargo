@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { SYSTEM_PROMPT_CARGO_SPECS } from './src/constants/aiPrompts.js';
 
 // Vite Plugin for Gemini AI Backend Endpoint (/api/gemini-recommend)
 const geminiBackendPlugin = (): Plugin => ({
@@ -183,30 +184,6 @@ const geminiBackendPlugin = (): Plugin => ({
 
               const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
-              const systemInstructionText = `You are an expert global freight logistics AI classifier.
-Given commercial invoice item descriptions, HS codes, official HS tariff descriptions (hsDescription), and commodity categories, infer the exact physical nature, transportation specs, commodity category, and handling/loading access.
-
-Special Rules for HS Chapters:
-- Chapter 04 (0401..0410 Dairy, Milk, Cream, Cheese, Butter) or fresh foods/pharma -> physical_state: "perishable", humidity_control: true, humidity_notes: "Maintain 2°C–4°C (Reefer Cold Chain Required)", commodity_category: "fda_regulated", handling_requirements: "standard", loading_access: "standard_rear_door".
-- Chapter 87 (Vehicles, Trucks, Cars) -> physical_state: "vehicle", cargo_form: "machinery", commodity_category: "jewelry_high_value", handling_requirements: "side_loading", loading_access: "side_roll_on".
-- Chapter 84/85 (Heavy Machinery, Engines, CNC Lathes) -> physical_state: "machinery", cargo_form: "machinery", commodity_category: "jewelry_high_value", handling_requirements: "top_loading", loading_access: "overhead_crane".
-- Liquids/Oils/Chemicals/Drums/ISO Tanks -> physical_state: "liquid", cargo_form: "bulk_liquid", commodity_category: "hazardous" (if chemicals) or "general", handling_requirements: "standard", loading_access: "standard_rear_door".
-- Compressed Gas/Cylinders -> physical_state: "gas", cargo_form: "bulk_gas", commodity_category: "hazardous", handling_requirements: "standard", loading_access: "standard_rear_door".
-- Electronics / Microchips / Fragile / Precision -> physical_state: "solid", cargo_form: "packaged_dry", commodity_category: "jewelry_high_value", handling_requirements: "fragile_delicate", loading_access: "standard_rear_door".
-- General dry packaged goods -> physical_state: "solid", cargo_form: "packaged_dry", commodity_category: "general", handling_requirements: "standard", loading_access: "standard_rear_door".
-
-Return JSON adhering to this exact schema:
-{
-  "physical_state": "solid" | "liquid" | "gas" | "machinery" | "perishable" | "vehicle",
-  "cargo_form": "packaged_dry" | "bulk_liquid" | "bulk_gas" | "machinery",
-  "humidity_control": boolean,
-  "humidity_notes": string,
-  "commodity_category": "general" | "hazardous" | "fda_regulated" | "agri_wood" | "jewelry_high_value" | "wood_pkg",
-  "handling_requirements": "standard" | "top_loading" | "side_loading" | "fragile_delicate",
-  "loading_access": "standard_rear_door" | "overhead_crane" | "side_roll_on",
-  "reason": string
-}`;
-
               if (apiKey && apiKey.trim().length > 0) {
                 try {
                   const geminiRes = await fetch(
@@ -216,7 +193,7 @@ Return JSON adhering to this exact schema:
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         systemInstruction: {
-                          parts: [{ text: systemInstructionText }],
+                          parts: [{ text: SYSTEM_PROMPT_CARGO_SPECS }],
                         },
                         contents: [
                           {
@@ -407,116 +384,12 @@ Return JSON adhering to this exact schema:
   },
 });
 
-// Vite Plugin for Reef API HS Code Proxy (/api/reef-classify)
-const reefApiProxyPlugin = (): Plugin => ({
-  name: 'reef-api-proxy',
-  configureServer(server) {
-    server.middlewares.use(async (req, res, next) => {
-      if (req.url?.startsWith('/api/reef-classify') && req.method === 'POST') {
-        let body = '';
-        req.on('data', (chunk) => {
-          body += chunk;
-        });
-
-        req.on('end', async () => {
-          try {
-            const parsedBody = JSON.parse(body);
-            let destCountry = parsedBody.destination || 'US';
-            if (typeof destCountry === 'string' && destCountry.length > 2) {
-              destCountry = destCountry.substring(0, 2).toUpperCase();
-            }
-
-            const payload = {
-              description: parsedBody.description,
-              destination: destCountry,
-            };
-
-            const apiKey =
-              req.headers['x-api-key'] ||
-              process.env.VITE_REEF_KEY ||
-              process.env.REEF_KEY ||
-              'ak_live_mnbvzNOvslBkrIr-06SNdS9AhLQHhkRZ';
-
-            const reefRes = await fetch('https://api.reefapi.com/hs-code/v1/classify', {
-              method: 'POST',
-              headers: {
-                'content-type': 'application/json',
-                ...(apiKey ? { 'x-api-key': String(apiKey) } : {}),
-              },
-              body: JSON.stringify(payload),
-            });
-
-            const reefData = await reefRes.text();
-            res.statusCode = reefRes.status;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(reefData);
-          } catch (err: any) {
-            res.statusCode = 500;
-            res.end(JSON.stringify({ error: err.message }));
-          }
-        });
-        return;
-      }
-      next();
-    });
-  },
-  configurePreviewServer(server) {
-    server.middlewares.use(async (req, res, next) => {
-      if (req.url?.startsWith('/api/reef-classify') && req.method === 'POST') {
-        let body = '';
-        req.on('data', (chunk) => {
-          body += chunk;
-        });
-
-        req.on('end', async () => {
-          try {
-            const parsedBody = JSON.parse(body);
-            let destCountry = parsedBody.destination || 'US';
-            if (typeof destCountry === 'string' && destCountry.length > 2) {
-              destCountry = destCountry.substring(0, 2).toUpperCase();
-            }
-
-            const payload = {
-              description: parsedBody.description,
-              destination: destCountry,
-            };
-
-            const apiKey =
-              req.headers['x-api-key'] ||
-              process.env.VITE_REEF_KEY ||
-              process.env.REEF_KEY ||
-              'ak_live_mnbvzNOvslBkrIr-06SNdS9AhLQHhkRZ';
-
-            const reefRes = await fetch('https://api.reefapi.com/hs-code/v1/classify', {
-              method: 'POST',
-              headers: {
-                'content-type': 'application/json',
-                ...(apiKey ? { 'x-api-key': String(apiKey) } : {}),
-              },
-              body: JSON.stringify(payload),
-            });
-
-            const reefData = await reefRes.text();
-            res.statusCode = reefRes.status;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(reefData);
-          } catch (err: any) {
-            res.statusCode = 500;
-            res.end(JSON.stringify({ error: err.message }));
-          }
-        });
-        return;
-      }
-      next();
-    });
-  },
-});
-
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   process.env = { ...process.env, ...env };
 
   return {
-    plugins: [react(), geminiBackendPlugin(), reefApiProxyPlugin()],
+    plugins: [react(), geminiBackendPlugin()],
   };
 });
+

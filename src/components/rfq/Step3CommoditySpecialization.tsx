@@ -29,7 +29,6 @@ export const Step3CommoditySpecialization: React.FC<Step3CommoditySpecialization
     { label: 'FDA Regulated Goods', value: 'fda_regulated' },
     { label: 'Agricultural & Wood Products', value: 'agri_wood' },
     { label: 'High Value / Fine Jewelry', value: 'jewelry_high_value' },
-    { label: 'Wood Packaging Materials', value: 'wood_pkg' },
   ];
 
   const loadingTypeOptions = [
@@ -46,7 +45,7 @@ export const Step3CommoditySpecialization: React.FC<Step3CommoditySpecialization
   ];
 
   const showFclLoadingType =
-    formData.mode === 'OCEAN' && formData.load_type === 'FCL' && formData.service_scope === 'door_to_door';
+    formData.mode === 'Ship' && formData.load_type === 'FCL' && formData.service_scope === 'D2D';
 
   return (
     <div className="step3-container animate-fade-in">

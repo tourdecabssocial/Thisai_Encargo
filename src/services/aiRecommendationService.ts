@@ -1,5 +1,6 @@
 import type { AIEquipmentInput, AIEquipmentOutput } from '../types/aiEquipment';
 import { SYSTEM_PROMPT_EQUIPMENT_ENGINE, sanitizeAndValidateAIResult } from './equipmentEvaluationEngine';
+import { buildEquipmentEvaluationUserPrompt } from '../constants/aiPrompts';
 
 /**
  * AI Equipment Allocation Service (Strict Pure AI Generation)
@@ -52,7 +53,7 @@ export const requestAIEquipmentRecommendation = async (
               contents: [
                 {
                   role: 'user',
-                  parts: [{ text: `Evaluate shipment specs and allocate equipment:\n${JSON.stringify(input, null, 2)}` }],
+                  parts: [{ text: buildEquipmentEvaluationUserPrompt(input) }],
                 },
               ],
               generationConfig: { responseMimeType: 'application/json' },

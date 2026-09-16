@@ -70,6 +70,8 @@ const INITIAL_FORM_DATA: RFQFormData = {
   container_count: 1,
 
   hs_code: '',
+  origin_hs_code: '',
+  destination_hs_code: '',
   commodity_description: '',
 
   cargo_value: 0,
@@ -80,6 +82,8 @@ const INITIAL_FORM_DATA: RFQFormData = {
 
   incoterm: 'DDP',
   insurance_required: true,
+  insurance_provider_type: 'thisai',
+  insurance_instructions: '',
 
   origin_customs_clearance: true,
   origin_customs_broker: 'Thisai Customs Broker',
@@ -358,7 +362,7 @@ export function useRFQForm() {
 
   const nextStep = () => {
     if (validateStep(activeStep)) {
-      setActiveStep((prev) => Math.min(prev + 1, 4));
+      setActiveStep((prev) => Math.min(prev + 1, 3));
     }
   };
 
@@ -395,7 +399,16 @@ export function useRFQForm() {
     try {
       await new Promise((res) => setTimeout(res, 800));
       const payload = transformRFQPayload(formData);
-      setSubmittedData(payload);
+      const record: SubmittedRFQRecord = {
+        id: 'rfq-' + Date.now(),
+        referenceNo: 'RFQ-' + Math.floor(100000 + Math.random() * 900000),
+        submittedAt: new Date().toISOString(),
+        payload,
+        calculatedVolumeCbm: totalVolumeCbm,
+        calculatedGrossWeightKg: totalGrossWeightKg,
+        calculatedVolumetricWeight: volumetricWeightKg,
+      };
+      setSubmittedData(record);
       setIsSubmitted(true);
     } catch (err) {
       console.error('Failed to submit RFQ:', err);

@@ -55,6 +55,15 @@
   margin: 0;
 }
 
+.rfq-flow-visualizer-sticky-wrapper {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 35;
+  background: var(--bg-body, #f8fafc);
+  padding-bottom: 0.5rem;
+  padding-top: 0.25rem;
+}
+
 .rfq-flow-grid {
   display: grid;
   grid-template-columns: 320px 1fr 340px;
@@ -65,27 +74,31 @@
 
 /* Both Left & Right Sidebar Panes Share Identical Sticky Positioning */
 .rfq-left-pane,
+.rfq-right-pane,
 .rfq-sidebar-pane {
   position: sticky;
-  top: 1.5rem;
+  top: 15.5rem;
   width: 100%;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 260px);
   overflow-y: auto;
   scrollbar-width: thin; /* For Firefox */
 }
 
 /* Custom Scrollbar for sidebars */
 .rfq-left-pane::-webkit-scrollbar,
+.rfq-right-pane::-webkit-scrollbar,
 .rfq-sidebar-pane::-webkit-scrollbar {
   width: 6px;
 }
 
 .rfq-left-pane::-webkit-scrollbar-track,
+.rfq-right-pane::-webkit-scrollbar-track,
 .rfq-sidebar-pane::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .rfq-left-pane::-webkit-scrollbar-thumb,
+.rfq-right-pane::-webkit-scrollbar-thumb,
 .rfq-sidebar-pane::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
   border-radius: 10px;
@@ -103,8 +116,11 @@
     grid-template-columns: 1fr;
   }
   .rfq-left-pane,
-  .rfq-sidebar-pane {
+  .rfq-right-pane,
+  .rfq-sidebar-pane,
+  .rfq-flow-visualizer-sticky-wrapper {
     position: static;
+    max-height: none;
   }
 }
 

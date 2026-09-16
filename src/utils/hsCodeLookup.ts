@@ -1,4 +1,5 @@
 import type { PhysicalState, CargoForm } from '../types/aiEquipment';
+import { SYSTEM_PROMPT_HS_CLASSIFIER, buildHSClassifierUserPrompt } from '../constants/aiPrompts';
 
 export interface HSCodeSuggestion {
   hsCode: string;
@@ -15,156 +16,85 @@ export interface InferredCargoSpecs {
   reason: string;
 }
 
-export interface ReefHSCandidate {
+export interface GeminiHSCandidate {
   code: string;
   code_digits?: string;
   description: string;
+  wco_6digit?: string;
+  country_name?: string;
   confidence?: number;
-  reason?: string;
-  duty_general_mfn?: string | null;
-  duty_general_mfn_pct?: number | null;
-  confidence_band?: string;
-  review_required?: boolean;
+  category?: string;
+  duty_notes?: string;
 }
 
-export interface ReefHSResponse {
-  ok: boolean;
-  meta?: {
-    api?: string;
-    endpoint?: string;
-    mode?: string;
-    latency_ms?: number;
-    record_count?: number;
-  };
-  data?: {
-    destination?: string;
-    query?: string;
-    candidates?: ReefHSCandidate[];
-    top_candidate?: ReefHSCandidate;
-  };
-  error?: {
-    code?: string;
-    message?: string;
-  };
-}
+// Backward compatibility alias
+export type ReefHSCandidate = GeminiHSCandidate;
 
 /**
- * Classifies product description using Reef API (POST https://api.reefapi.com/hs-code/v1/classify)
+ * Classifies product description using Google Gemini AI for Country-Specific HS Tariff Codes
+ * supporting both Origin and Destination countries.
+ * Pure AI Engine — No local fallbacks or hardcoded dictionaries.
  */
-export const classifyHSCodeReefAPI = async (
+export const classifyHSCodeWithGemini = async (
   description: string,
-  destination: string = 'US',
+  originCountry: string = 'India',
+  destinationCountry: string = 'United States',
   customApiKey?: string
-): Promise<ReefHSCandidate[]> => {
+): Promise<GeminiHSCandidate[]> => {
   if (!description || description.trim().length < 2) return [];
 
-  // Pass default US if destination is not in allowed list ('US', 'UK') by Reef API
-  const validDestination = destination && ['US', 'UK'].includes(destination.toUpperCase())
-    ? destination.toUpperCase()
-    : 'US';
+  const rawKey = customApiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || (import.meta as any).env?.GEMINI_API_KEY || '';
+  const apiKey = String(rawKey).trim();
 
-  const apiKey = customApiKey || (import.meta as any).env?.VITE_REEF_KEY || 'ak_live_mnbvzNOvslBkrIr-06SNdS9AhLQHhkRZ';
+  if (apiKey.length > 0) {
+    const configuredModel = (import.meta as any).env?.VITE_GEMINI_MODEL;
+    const modelCandidates = configuredModel
+      ? [configuredModel, 'gemini-flash-lite-latest', 'gemini-pro-latest']
+      : ['gemini-flash-lite-latest', 'gemini-pro-latest', 'gemini-flash-latest'];
 
-  // 1. Try reverse proxy endpoint (/api/reef-classify) first (Works in Node dev, preview & Nginx production proxy)
-  try {
-    const proxyRes = await fetch('/api/reef-classify', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(apiKey ? { 'x-api-key': apiKey } : {}),
-      },
-      body: JSON.stringify({
-        description: description.trim(),
-        destination: validDestination,
-      }),
-    });
+    for (const modelName of modelCandidates) {
+      try {
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: SYSTEM_PROMPT_HS_CLASSIFIER }] },
+              contents: [
+                {
+                  role: 'user',
+                  parts: [
+                    {
+                      text: buildHSClassifierUserPrompt(description, originCountry, destinationCountry),
+                    },
+                  ],
+                },
+              ],
+              generationConfig: { responseMimeType: 'application/json' },
+            }),
+          }
+        );
 
-    if (proxyRes.ok) {
-      const resJson: ReefHSResponse = await proxyRes.json();
-      if (resJson.ok && resJson.data?.candidates && resJson.data.candidates.length > 0) {
-        return resJson.data.candidates;
-      }
-    }
-  } catch {
-    // Proxy endpoint unavailable
-  }
-
-  // 2. Direct fetch fallback with Authorization Bearer header (CORS compliant)
-  if (apiKey) {
-    try {
-      const response = await fetch('https://api.reefapi.com/hs-code/v1/classify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'x-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          description: description.trim(),
-          destination: validDestination,
-        }),
-      });
-
-      if (response.ok) {
-        const data: ReefHSResponse = await response.json();
-        if (data.ok && data.data?.candidates) {
-          return data.data.candidates;
+        if (geminiRes.ok) {
+          const data = await geminiRes.json();
+          const textResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (textResponse) {
+            const parsed = JSON.parse(textResponse);
+            if (parsed && Array.isArray(parsed.candidates) && parsed.candidates.length > 0) {
+              return parsed.candidates;
+            }
+          }
         }
+      } catch (err) {
+        console.warn(`Gemini HS classifier exception for model ${modelName}:`, err);
       }
-    } catch (err) {
-      console.warn('Reef API direct fetch exception:', err);
     }
   }
 
-  // Local fallback candidates if API call yields no results
-  const lower = description.toLowerCase();
-
-  if (lower.includes('lathe') || lower.includes('machine') || lower.includes('cnc') || lower.includes('equipment')) {
-    return [
-      {
-        code: '8458.11',
-        description: 'Horizontal lathes, numerically controlled (CNC Lathes)',
-        confidence: 0.94,
-        duty_general_mfn: '4.4%',
-      },
-      {
-        code: '8459.61',
-        description: 'Milling machines for metals, numerically controlled',
-        confidence: 0.88,
-        duty_general_mfn: '4.2%',
-      },
-      {
-        code: '8466.93',
-        description: 'Parts and accessories for machine tools of headings 8456 to 8461',
-        confidence: 0.79,
-        duty_general_mfn: 'Free',
-      },
-    ];
-  }
-
-  if (lower.includes('shirt') || lower.includes('cotton') || lower.includes('textile') || lower.includes('apparel')) {
-    return [
-      {
-        code: '6105.10',
-        description: "Men's or boys' shirts, knitted or crocheted, of cotton",
-        confidence: 0.95,
-        duty_general_mfn: '19.7%',
-      },
-      {
-        code: '6205.20',
-        description: "Men's or boys' shirts, of cotton, not knitted or crocheted",
-        confidence: 0.91,
-        duty_general_mfn: '19.7%',
-      },
-    ];
-  }
-
-  return [
-    {
-      code: '8479.89',
-      description: 'Machines and mechanical appliances having individual functions, n.e.s.o.i.',
-      confidence: 0.72,
-      duty_general_mfn: '2.5%',
-    },
-  ];
+  // Pure AI classification - Return empty array if API fails or key missing
+  return [];
 };
+
+// Backward-compatible export alias
+export const classifyHSCodeReefAPI = classifyHSCodeWithGemini;

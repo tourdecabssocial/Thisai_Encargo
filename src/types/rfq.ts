@@ -3,19 +3,22 @@ export type ServiceScope = 'D2D' | 'P2P' | 'P2D' | 'D2P';
 export type ShipmentType = 'Import' | 'Export';
 export type UnitSystem = 'metric' | 'imperial';
 export type LoadType = 'FCL' | 'LCL' | 'Roll-on/Roll-off' | 'Breakbulk';
-export type CurrencyType = 'USD' | 'INR';
+export type CurrencyType = 'USD' | 'EUR' | 'GBP' | 'INR';
 export type CustomsBrokerType = 'Thisai Customs Broker' | 'Customer / External Broker';
+export type InsuranceProviderType = 'thisai' | 'customer_external';
 
 export interface CustomerOption {
   id: string;
   name: string;
   company: string;
   email: string;
+  country?: string;
 }
 
 export interface PortOption {
   code: string;
   name: string;
+  city?: string;
   country: string;
   countryCode: string;
 }
@@ -79,7 +82,14 @@ export interface RFQFormData {
   // Step 2: Cargo & Load Specs
   unit_system: UnitSystem;
   hs_code: string;
+  origin_hs_code?: string;
+  destination_hs_code?: string;
   commodity_description: string;
+  commodity_category?: string;
+  fda_registration_no?: string;
+  loading_type?: string;
+  customs_clearance?: boolean;
+  declared_value?: number;
   load_type: LoadType;
   container_type: string;
   container_count: number;
@@ -88,10 +98,10 @@ export interface RFQFormData {
   temperature_control_required: boolean;
   target_temperature?: number | string;
 
-  commercial_docs: File | null;
-  commercial_docs_name: string;
-  packaginglist_docs: File | null;
-  packaginglist_docs_name: string;
+  commercial_docs?: File | null;
+  commercial_docs_name?: string;
+  packaginglist_docs?: File | null;
+  packaginglist_docs_name?: string;
 
   packages: PackageCard[];
   commercial_items: CommercialItem[];
@@ -99,6 +109,8 @@ export interface RFQFormData {
   // Step 3: Incoterms, Insurance & Customs Clearances
   incoterm: string;
   insurance_required: boolean;
+  insurance_provider_type?: InsuranceProviderType;
+  insurance_instructions?: string;
   origin_customs_clearance: boolean;
   origin_customs_broker?: CustomsBrokerType;
   destination_customs_clearance: boolean;
@@ -147,6 +159,8 @@ export interface RFQSubmissionPayload {
   temperature_control_required: boolean;
   target_temperature?: number | string;
   insurance_required: boolean;
+  insurance_provider_type?: InsuranceProviderType;
+  insurance_instructions?: string;
   origin_customs_clearance: boolean;
   origin_customs_broker?: CustomsBrokerType;
   destination_customs_clearance: boolean;

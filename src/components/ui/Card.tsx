@@ -10,6 +10,7 @@ interface CardProps {
   footer?: React.ReactNode;
   className?: string;
   glow?: boolean;
+  style?: React.CSSProperties;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -21,9 +22,10 @@ export const Card: React.FC<CardProps> = ({
   footer,
   className = '',
   glow = false,
+  style,
 }) => {
   return (
-    <div className={`ui-card ${glow ? 'ui-card-glow' : ''} ${className}`}>
+    <div className={`ui-card ${glow ? 'ui-card-glow' : ''} ${className}`} style={style}>
       {(title || icon || headerAction) && (
         <div className="ui-card-header">
           <div className="ui-card-title-group">

@@ -20,8 +20,6 @@ import {
   CheckCircle2,
   FileCheck,
   Compass,
-  ListFilter,
-  Search,
 } from 'lucide-react';
 import { getMinReadyDate, getMinDeliveryDate, SCOPE_INCOTERMS_MAP } from '../../utils/rfqConstants';
 import './Step1RouteScope.css';
@@ -249,9 +247,9 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
                   </div>
 
                   <div>
-                    <span style={{ fontWeight: 700, fontSize: '0.78rem', display: 'block', color: isSelected ? '#1d4ed8' : '#334155', lineHeight: 1.25 }}>
+                    {/* <span style={{ fontWeight: 700, fontSize: '0.78rem', display: 'block', color: isSelected ? '#1d4ed8' : '#334155', lineHeight: 1.25 }}>
                       {option.title}
-                    </span>
+                    </span> */}
                     <span style={{ fontSize: '0.68rem', fontWeight: 600, color: isSelected ? '#2563eb' : '#64748b' }}>
                       {option.badge}
                     </span>

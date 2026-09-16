@@ -63,8 +63,7 @@ export const calculateTotalGrossWeightKg = (
 /**
  * Mode-Specific Volumetric Weight Calculation
  * - Air Freight: 1 CBM = 166.67 kg (Divisor 6,000 cm³/kg)
- * - Ocean LCL: W/M Standard 1 CBM = 1,000 kg (1 MT)
- * - Ocean FCL: Flat Container Rated (Volumetric is N/A or set to 0)
+ * - Ocean Freight (FCL & LCL W/M): 1 CBM = 1,000 kg (1 Metric Ton W/M Standard)
  */
 export const calculateVolumetricWeight = (
   totalVolumeCbm: number,
@@ -72,23 +71,22 @@ export const calculateVolumetricWeight = (
   loadType: LoadType = 'FCL',
   unitSystem: UnitSystem = 'metric'
 ): { volumetricWeightKg: number; ruleDescription: string } => {
-  let factor = 0;
-  let ruleDescription = '';
+  let factor = 1000;
+  let ruleDescription = 'Ocean W/M (1 CBM = 1,000 kg)';
 
-  if (mode === 'Air' || loadType === 'AIR_STANDARD') {
+  const normalizedMode = String(mode || '').toLowerCase();
+
+  if (normalizedMode === 'air' || (loadType as string) === 'AIR_STANDARD') {
     factor = 166.67; // IATA standard air freight divisor (6000 cm³/kg)
     ruleDescription = 'Air Freight (1 CBM = 166.67 kg)';
-  } else if (mode === 'Ship' && loadType === 'LCL') {
-    factor = 1000; // Ocean LCL W/M rule (1 CBM = 1,000 kg)
-    ruleDescription = 'Ocean LCL W/M (1 CBM = 1,000 kg)';
   } else {
-    // Ocean FCL
-    factor = 0;
-    ruleDescription = 'FCL Flat Container Rated';
+    // Ocean Freight (FCL, LCL, Breakbulk, RoRo)
+    factor = 1000; // Ocean standard W/M ratio (1 CBM = 1,000 kg)
+    ruleDescription = 'Ocean W/M (1 CBM = 1,000 kg)';
   }
 
   const volWeightKg = totalVolumeCbm * factor;
-  const resultKg = unitSystem === 'imperial' ? volWeightKg / 2.20462 : volWeightKg;
+  const resultKg = unitSystem === 'imperial' ? volWeightKg * 2.20462 : volWeightKg;
 
   return {
     volumetricWeightKg: Math.round(resultKg),

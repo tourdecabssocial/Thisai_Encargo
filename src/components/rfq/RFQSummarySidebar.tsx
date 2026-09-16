@@ -14,10 +14,7 @@ import {
   FileText,
   Receipt,
 } from 'lucide-react';
-import {
-  generateShipmentRouteLifecycle,
-  type RouteStage,
-} from '../../services/shipmentLifecycleEngine';
+import { type RouteStage } from '../../services/shipmentLifecycleEngine';
 import './ShipmentLifecycleRouteCard.css';
 import './RFQSummarySidebar.css';
 
@@ -99,7 +96,6 @@ export const getStageCharges = (
   return charges.filter((c) => !c.applicableScopes || c.applicableScopes.includes(serviceScope));
 };
 
-
 export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
   formData,
   totalVolumeCbm = 0,
@@ -107,16 +103,6 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
   volumetricWeight = 0,
 }) => {
   const isMetric = formData.unit_system === 'metric';
-
-  // Currency Symbol calculation
-  const currencySymbol =
-    formData.currency === 'EUR'
-      ? '€'
-      : formData.currency === 'INR'
-      ? '₹'
-      : formData.currency === 'GBP'
-      ? '£'
-      : '$';
 
   // Safe numerical calculations
   const safeVolume = Number(totalVolumeCbm) || 0;
@@ -253,7 +239,6 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
           const isExpanded = expandedStageIds.includes(stage.id);
           const isLast = idx === filteredStages.length - 1;
           const stageCharges = getStageCharges(stage.id, formData.mode, formData.service_scope || 'D2D');
-          const totalStageAmount = stageCharges.reduce((sum, c) => sum + c.amount, 0);
 
           return (
             <div
@@ -303,7 +288,7 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
                           marginBottom: '0.55rem',
                           display: 'flex',
                           alignItems: 'center',
-                          justify: 'space-between',
+                          justifyContent: 'space-between',
                           width: '100%',
                         }}
                       >

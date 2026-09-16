@@ -5,7 +5,6 @@ import { ShipmentFlowVisualizer } from '../components/rfq/ShipmentFlowVisualizer
 import { Step1RouteScope } from '../components/rfq/Step1RouteScope';
 import { Step2CargoPackages } from '../components/rfq/Step2CargoPackages';
 import { Step3ContainerLoadConfig } from '../components/rfq/Step3ContainerLoadConfig';
-import { Step4ServicesOptions } from '../components/rfq/Step4ServicesOptions';
 import { RFQSummarySidebar } from '../components/rfq/RFQSummarySidebar';
 import { ShipmentLifecycleRouteCard } from '../components/rfq/ShipmentLifecycleRouteCard';
 import { RFQSubmissionReport } from '../components/rfq/RFQSubmissionReport';
@@ -40,14 +39,16 @@ export const RFQFormFlow: React.FC = () => {
   }
 
   // Dynamic Selected Address & Port Labels Resolution for Flow Diagrams & Cards
-  const getAddressLabel = (addrObj: any, addrId: string) => {
+  const getAddressLabel = (addrObj: any, addrId?: string) => {
     if (addrObj) {
       if (typeof addrObj === 'string') return addrObj;
       if (addrObj.label) return addrObj.label;
       if (addrObj.city) return `${addrObj.city}, ${addrObj.countryCode || addrObj.country || ''}`;
     }
-    const found = mockAddresses.find((a) => a.id === addrId);
-    if (found) return `${found.label} (${found.city})`;
+    if (addrId) {
+      const found = mockAddresses.find((a) => a.id === addrId);
+      if (found) return `${found.label} (${found.city})`;
+    }
     return '';
   };
 
@@ -82,15 +83,17 @@ export const RFQFormFlow: React.FC = () => {
       <StepIndicator currentStep={activeStep} onStepClick={(step) => setActiveStep(step)} />
 
       {/* End-to-End Visual Shipment Flow Diagram (Adapts to Transport Mode & Scope) */}
-      <ShipmentFlowVisualizer
-        mode={formData.mode}
-        serviceScope={formData.service_scope}
-        fromAddress={fromAddrLabel}
-        toAddress={toAddrLabel}
-        originName={originPortLabel}
-        destName={destPortLabel}
-        currentStep={activeStep}
-      />
+      <div className="rfq-flow-visualizer-sticky-wrapper">
+        <ShipmentFlowVisualizer
+          mode={formData.mode}
+          serviceScope={formData.service_scope}
+          fromAddress={fromAddrLabel}
+          toAddress={toAddrLabel}
+          originName={originPortLabel}
+          destName={destPortLabel}
+          currentStep={activeStep}
+        />
+      </div>
 
       {/* Main Flow Layout: Left Route Planner + Form Wizard + Right Live Summary */}
       <div className="rfq-flow-grid">
@@ -122,10 +125,9 @@ export const RFQFormFlow: React.FC = () => {
             <h2 className="step-title">
               {activeStep === 1 && 'Step 1: Transport Mode, Scope, Incoterms & Route'}
               {activeStep === 2 && 'Step 2: Commodity, Load & Container Specs'}
-              {activeStep === 3 && 'Step 3: Insurance, Customs Brokers & Wood Packaging'}
-              {activeStep === 4 && 'Step 4: Industrial Crating & Special Instructions'}
+              {activeStep === 3 && 'Step 3: Insurance, Customs Brokers & Special Instructions'}
             </h2>
-            <span className="step-count">Step {activeStep} of 4</span>
+            <span className="step-count">Step {activeStep} of 3</span>
           </div>
 
           <div className="rfq-card-body">
@@ -156,15 +158,6 @@ export const RFQFormFlow: React.FC = () => {
                 onSetFieldValue={setFieldValue}
               />
             )}
-
-            {activeStep === 4 && (
-              <Step4ServicesOptions
-                formData={formData}
-                errors={errors}
-                onChange={handleChange}
-                onSetFieldValue={setFieldValue}
-              />
-            )}
           </div>
 
           <div className="rfq-card-footer">
@@ -176,7 +169,7 @@ export const RFQFormFlow: React.FC = () => {
               <div />
             )}
 
-            {activeStep < 4 ? (
+            {activeStep < 3 ? (
               <Button type="button" variant="primary" onClick={nextStep} rightIcon={<ArrowRight size={18} />}>
                 Next Step
               </Button>

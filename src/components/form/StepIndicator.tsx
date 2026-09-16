@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Package, Box, ShieldCheck, Check } from 'lucide-react';
+import { MapPin, Package, ShieldCheck, Check } from 'lucide-react';
 import './StepIndicator.css';
 
 interface StepIndicatorProps {
@@ -9,9 +9,8 @@ interface StepIndicatorProps {
 
 const steps = [
   { number: 1, title: 'Route & Schedule', subtitle: 'Origin & Dest', icon: MapPin },
-  { number: 2, title: 'Cargo Specs', subtitle: 'Items & Nature', icon: Package },
-  { number: 3, title: 'Container Load', subtitle: 'Equipment & Docs', icon: Box },
-  { number: 4, title: 'Services & Options', subtitle: 'Insurance & Review', icon: ShieldCheck },
+  { number: 2, title: 'Cargo & Crating Specs', subtitle: 'Items & Crating', icon: Package },
+  { number: 3, title: 'Services & Operations', subtitle: 'Insurance, Customs & Notes', icon: ShieldCheck },
 ];
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, onStepClick }) => {

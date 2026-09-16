@@ -37,9 +37,6 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
     );
   };
 
-  const expandAll = () => setExpandedStageIds(stages.map((s) => s.id));
-  const collapseAll = () => setExpandedStageIds([]);
-
   const filteredStages =
     filterCategory === 'All' ? stages : stages.filter((s) => s.category === filterCategory);
 

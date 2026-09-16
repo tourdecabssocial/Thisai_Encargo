@@ -3,13 +3,11 @@ import type { RFQFormData, PackageCard, CommercialItem } from '../../types/rfq';
 import { FormInput } from '../form/FormInput';
 import { FormSelect } from '../form/FormSelect';
 import { Button } from '../ui/Button';
-import { classifyHSCodeReefAPI, type ReefHSCandidate } from '../../utils/hsCodeLookup';
+import { classifyHSCodeWithGemini, type GeminiHSCandidate } from '../../utils/hsCodeLookup';
 import {
   getContainerSpecByNameOrCode,
-  getExactContainerName,
   computeOptimalEquipmentMix,
   type ContainerCategory,
-  type EquipmentMixResult,
 } from '../../utils/containerSpecs';
 import { requestAIEquipmentRecommendation } from '../../services/aiRecommendationService';
 import { detectCargoHazmatClassification } from '../../services/equipmentEvaluationEngine';
@@ -20,7 +18,7 @@ import {
   calculateVolumetricWeight,
   calculateChargeableWeightKg,
 } from '../../utils/rfqCalculations';
-import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, IndianRupee, Euro, PoundSterling, JapaneseYen, PackageCheck, Layers, Scale, Sparkles, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, IndianRupee, Euro, PoundSterling, JapaneseYen, PackageCheck, Layers, Scale, Sparkles, ChevronDown, ChevronUp, Info, TreePine, AlertTriangle } from 'lucide-react';
 import './Step2CargoPackages.css';
 
 const getCurrencySymbol = (currency: string = 'USD'): string => {
@@ -80,12 +78,12 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
   const [showMultiSKU, setShowMultiSKU] = useState<boolean>(formData.commercial_items.length > 1);
   const [activeContainerIndex, setActiveContainerIndex] = useState<number>(0);
 
-  // REEF API HS Code Auto-Suggest State
-  const [hsCandidates, setHsCandidates] = useState<ReefHSCandidate[]>([]);
+  // Gemini AI HS Code Auto-Suggest State
+  const [hsCandidates, setHsCandidates] = useState<GeminiHSCandidate[]>([]);
   const [isSearchingHS, setIsSearchingHS] = useState<boolean>(false);
   const [dismissedHsCandidates, setDismissedHsCandidates] = useState<boolean>(false);
 
-  // Debounced REEF API Lookup when Commodity Description changes
+  // Debounced Gemini AI Lookup when Commodity Description changes
   useEffect(() => {
     const query = formData.commodity_description;
     if (!query || query.trim().length < 3 || dismissedHsCandidates) {
@@ -96,19 +94,53 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
     const timer = setTimeout(async () => {
       setIsSearchingHS(true);
       try {
-        const candidates = await classifyHSCodeReefAPI(query, formData.destCountry || 'US');
+        const origin = formData.originCountry || formData.from_address?.country || 'India';
+        const dest = formData.destCountry || formData.to_address?.country || 'United States';
+        const candidates = await classifyHSCodeWithGemini(query, origin, dest);
         if (!dismissedHsCandidates) {
           setHsCandidates(candidates);
         }
       } catch (err) {
-        console.warn('REEF API HS Lookup error:', err);
+        console.warn('Gemini AI HS Lookup error:', err);
       } finally {
         setIsSearchingHS(false);
       }
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [formData.commodity_description, formData.destCountry, dismissedHsCandidates]);
+  }, [formData.commodity_description, formData.originCountry, formData.destCountry, formData.from_address?.country, formData.to_address?.country, dismissedHsCandidates]);
+
+  // Origin & Destination Country Names & Candidates Partitioning
+  const originCountryName = formData.originCountry || formData.from_address?.country || 'Origin';
+  const destCountryName = formData.destCountry || formData.to_address?.country || 'Destination';
+
+  const originCandidates = hsCandidates.filter((c) =>
+    (c.country_name || '').toLowerCase().includes('export') ||
+    (c.country_name || '').toLowerCase().includes('origin') ||
+    (c.country_name || '').toLowerCase().includes(String(originCountryName).toLowerCase())
+  );
+
+  const destCandidates = hsCandidates.filter((c) =>
+    (c.country_name || '').toLowerCase().includes('import') ||
+    (c.country_name || '').toLowerCase().includes('dest') ||
+    (c.country_name || '').toLowerCase().includes(String(destCountryName).toLowerCase())
+  );
+
+  const sortCandidatesByConfidence = (list: GeminiHSCandidate[]) => {
+    return [...list].sort((a, b) => (b.confidence ?? 0.85) - (a.confidence ?? 0.85));
+  };
+
+  const finalOriginCandidates = sortCandidatesByConfidence(
+    originCandidates.length > 0
+      ? originCandidates
+      : hsCandidates.slice(0, Math.ceil(hsCandidates.length / 2))
+  );
+
+  const finalDestCandidates = sortCandidatesByConfidence(
+    destCandidates.length > 0
+      ? destCandidates
+      : hsCandidates.slice(Math.ceil(hsCandidates.length / 2))
+  );
 
   // File Upload Handlers
   const handleCommercialDocsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -404,206 +436,315 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
 
   return (
     <div className="step-container animate-fade-in">
-      {/* 1. Drag & Drop Shipment Document Upload Dropzone */}
-      <div className="section-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
-          <div>
-            <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-              <FileText size={20} className="text-indigo" /> 1. Shipment Documents (Commercial Invoice & Packing List)
-            </h3>
-            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, marginTop: '0.2rem' }}>
-              Upload Commercial Invoice and Packing List for automatic cargo value, weights, and specifications extraction.
-            </p>
-          </div>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', background: '#dbeafe', padding: '0.3rem 0.65rem', borderRadius: '6px' }}>
-            ⚡ AI Auto-Extract Ready
-          </span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
-          {/* Commercial Invoice Dropzone */}
-          <div
-            style={{
-              padding: '1.25rem',
-              borderRadius: '12px',
-              border: commDocName ? '2px solid #22c55e' : '2px dashed #93c5fd',
-              background: commDocName ? '#f0fdf4' : '#f8fafc',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <div style={{ background: commDocName ? '#dcfce7' : '#dbeafe', color: commDocName ? '#15803d' : '#1d4ed8', padding: '0.6rem', borderRadius: '10px', display: 'flex' }}>
-                  <FileText size={22} />
-                </div>
-                <div>
-                  <span style={{ fontWeight: 700, fontSize: '0.925rem', display: 'block', color: '#1e293b' }}>
-                    Commercial Invoice *
-                  </span>
-                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                    PDF, PNG, JPG (up to 10MB)
-                  </span>
-                </div>
-              </div>
-              {commDocName && <CheckCircle2 size={20} style={{ color: '#22c55e' }} />}
+      {/* 1. Drag & Drop Shipment Document Upload Dropzone (Temporarily Disabled) */}
+      {false && (
+        <div className="section-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+            <div>
+              <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <FileText size={20} className="text-indigo" /> 1. Shipment Documents (Commercial Invoice & Packing List)
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, marginTop: '0.2rem' }}>
+                Upload Commercial Invoice and Packing List for automatic cargo value, weights, and specifications extraction.
+              </p>
             </div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2563eb', background: '#dbeafe', padding: '0.3rem 0.65rem', borderRadius: '6px' }}>
+              ⚡ AI Auto-Extract Ready
+            </span>
+          </div>
 
-            {commDocName ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                <span style={{ fontSize: '0.825rem', fontWeight: 600, color: '#15803d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                  ✓ {commDocName}
-                </span>
-                <label style={{ cursor: 'pointer', color: '#2563eb', fontSize: '0.78rem', fontWeight: 700 }}>
-                  Change
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '0.5rem' }}>
+            {/* Commercial Invoice Dropzone */}
+            <div
+              style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                border: commDocName ? '2px solid #22c55e' : '2px dashed #93c5fd',
+                background: commDocName ? '#f0fdf4' : '#f8fafc',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <div style={{ background: commDocName ? '#dcfce7' : '#dbeafe', color: commDocName ? '#15803d' : '#1d4ed8', padding: '0.6rem', borderRadius: '10px', display: 'flex' }}>
+                    <FileText size={22} />
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 700, fontSize: '0.925rem', display: 'block', color: '#1e293b' }}>
+                      Commercial Invoice *
+                    </span>
+                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                      PDF, PNG, JPG (up to 10MB)
+                    </span>
+                  </div>
+                </div>
+                {commDocName && <CheckCircle2 size={20} style={{ color: '#22c55e' }} />}
+              </div>
+
+              {commDocName ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                  <span style={{ fontSize: '0.825rem', fontWeight: 600, color: '#15803d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                    ✓ {commDocName}
+                  </span>
+                  <label style={{ cursor: 'pointer', color: '#2563eb', fontSize: '0.78rem', fontWeight: 700 }}>
+                    Change
+                    <input type="file" accept=".pdf,.jpg,.png" onChange={handleCommercialDocsUpload} style={{ display: 'none' }} />
+                  </label>
+                </div>
+              ) : (
+                <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#2563eb', color: '#ffffff', fontWeight: 600, fontSize: '0.85rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', textAlign: 'center' }}>
+                  <Upload size={16} /> Choose Invoice File
                   <input type="file" accept=".pdf,.jpg,.png" onChange={handleCommercialDocsUpload} style={{ display: 'none' }} />
                 </label>
-              </div>
-            ) : (
-              <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#2563eb', color: '#ffffff', fontWeight: 600, fontSize: '0.85rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', textAlign: 'center' }}>
-                <Upload size={16} /> Choose Invoice File
-                <input type="file" accept=".pdf,.jpg,.png" onChange={handleCommercialDocsUpload} style={{ display: 'none' }} />
-              </label>
-            )}
-          </div>
-
-          {/* Packing List Dropzone */}
-          <div
-            style={{
-              padding: '1.25rem',
-              borderRadius: '12px',
-              border: packDocName ? '2px solid #22c55e' : '2px dashed #93c5fd',
-              background: packDocName ? '#f0fdf4' : '#f8fafc',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <div style={{ background: packDocName ? '#dcfce7' : '#dbeafe', color: packDocName ? '#15803d' : '#1d4ed8', padding: '0.6rem', borderRadius: '10px', display: 'flex' }}>
-                  <PackageCheck size={22} />
-                </div>
-                <div>
-                  <span style={{ fontWeight: 700, fontSize: '0.925rem', display: 'block', color: '#1e293b' }}>
-                    Packing List *
-                  </span>
-                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                    PDF, PNG, JPG (up to 10MB)
-                  </span>
-                </div>
-              </div>
-              {packDocName && <CheckCircle2 size={20} style={{ color: '#22c55e' }} />}
+              )}
             </div>
 
-            {packDocName ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                <span style={{ fontSize: '0.825rem', fontWeight: 600, color: '#15803d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                  ✓ {packDocName}
-                </span>
-                <label style={{ cursor: 'pointer', color: '#2563eb', fontSize: '0.78rem', fontWeight: 700 }}>
-                  Change
+            {/* Packing List Dropzone */}
+            <div
+              style={{
+                padding: '1.25rem',
+                borderRadius: '12px',
+                border: packDocName ? '2px solid #22c55e' : '2px dashed #93c5fd',
+                background: packDocName ? '#f0fdf4' : '#f8fafc',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <div style={{ background: packDocName ? '#dcfce7' : '#dbeafe', color: packDocName ? '#15803d' : '#1d4ed8', padding: '0.6rem', borderRadius: '10px', display: 'flex' }}>
+                    <PackageCheck size={22} />
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 700, fontSize: '0.925rem', display: 'block', color: '#1e293b' }}>
+                      Packing List *
+                    </span>
+                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                      PDF, PNG, JPG (up to 10MB)
+                    </span>
+                  </div>
+                </div>
+                {packDocName && <CheckCircle2 size={20} style={{ color: '#22c55e' }} />}
+              </div>
+
+              {packDocName ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                  <span style={{ fontSize: '0.825rem', fontWeight: 600, color: '#15803d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                    ✓ {packDocName}
+                  </span>
+                  <label style={{ cursor: 'pointer', color: '#2563eb', fontSize: '0.78rem', fontWeight: 700 }}>
+                    Change
+                    <input type="file" accept=".pdf,.jpg,.png" onChange={handlePackingListUpload} style={{ display: 'none' }} />
+                  </label>
+                </div>
+              ) : (
+                <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#2563eb', color: '#ffffff', fontWeight: 600, fontSize: '0.85rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', textAlign: 'center' }}>
+                  <Upload size={16} /> Choose Packing List
                   <input type="file" accept=".pdf,.jpg,.png" onChange={handlePackingListUpload} style={{ display: 'none' }} />
                 </label>
-              </div>
-            ) : (
-              <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#2563eb', color: '#ffffff', fontWeight: 600, fontSize: '0.85rem', padding: '0.6rem 1rem', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', textAlign: 'center' }}>
-                <Upload size={16} /> Choose Packing List
-                <input type="file" accept=".pdf,.jpg,.png" onChange={handlePackingListUpload} style={{ display: 'none' }} />
-              </label>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 2. Commodity, Pricing & Commercial Specifications Card */}
       <div className="section-card" style={{ marginTop: '1.25rem' }}>
         <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Layers size={20} className="text-indigo" /> 2. Commodity, Pricing & Commercial Specifications
+          <Layers size={20} className="text-indigo" /> 1. Commodity, Pricing & Commercial Specifications
         </h3>
 
-        {/* Row 1: Commodity Description & HS Code + REEF API Auto-Suggest */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.15rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem' }}>
+        {/* Row 1: Commodity Description & Dual HS Code Selection */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem', marginBottom: '1.15rem' }}>
+          <FormInput
+            label="Commodity Description *"
+            name="commodity_description"
+            value={formData.commodity_description}
+            onChange={(e) => {
+              onSetFieldValue('commodity_description', e.target.value);
+              handlePrimaryItemChange('description', e.target.value);
+              setDismissedHsCandidates(false);
+            }}
+            placeholder="e.g. Green Tea / Precision Industrial Machining Equipment"
+            error={errors.commodity_description}
+            helperText="Descriptive cargo summary used by Gemini AI to classify HS codes"
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
             <FormInput
-              label="HS Code"
-              name="hs_code"
-              value={formData.hs_code}
+              label={`Origin HS Code (${originCountryName}) *`}
+              name="origin_hs_code"
+              value={formData.origin_hs_code || formData.hs_code || ''}
               onChange={(e) => {
+                onSetFieldValue('origin_hs_code', e.target.value);
                 onSetFieldValue('hs_code', e.target.value);
                 handlePrimaryItemChange('hsCode', e.target.value);
               }}
-              placeholder="e.g. 8458.11"
-              error={errors.hs_code}
-              helperText="Harmonized Tariff System Code"
+              placeholder="e.g. 0902.10.10 (ITC-HS Export)"
+              error={errors.origin_hs_code || errors.hs_code}
+              helperText={`Export Schedule Tariff Code for ${originCountryName}`}
             />
 
             <FormInput
-              label="Commodity Description *"
-              name="commodity_description"
-              value={formData.commodity_description}
+              label={`Destination HS Code (${destCountryName}) *`}
+              name="destination_hs_code"
+              value={formData.destination_hs_code || ''}
               onChange={(e) => {
-                onSetFieldValue('commodity_description', e.target.value);
-                handlePrimaryItemChange('description', e.target.value);
-                setDismissedHsCandidates(false);
+                onSetFieldValue('destination_hs_code', e.target.value);
               }}
-              placeholder="e.g. Precision Industrial Machining Equipment"
-              error={errors.commodity_description}
-              helperText="Descriptive cargo summary"
+              placeholder="e.g. 0902.10.1000 (HTS Import)"
+              error={errors.destination_hs_code}
+              helperText={`Import Tariff Schedule Code for ${destCountryName}`}
             />
           </div>
 
-          {/* REEF API HS Code Auto-Suggest Chip Badge */}
+          {/* Gemini AI Country-Aware HS Code Dual Selection Panels */}
           {isSearchingHS && (
             <div style={{ fontSize: '0.78rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-              <Sparkles size={14} className="animate-spin" /> Querying REEF AI Tariff Classifier...
+              <Sparkles size={14} className="animate-spin" /> Querying Gemini AI Origin & Destination Tariff Classifier...
             </div>
           )}
 
           {!isSearchingHS && hsCandidates.length > 0 && !dismissedHsCandidates && (
-            <div style={{ background: '#f0f6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '0.65rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.2rem' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Sparkles size={14} /> REEF API HS Code Suggestions:
+            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sparkles size={16} style={{ color: '#2563eb' }} /> Gemini AI Dual Tariff Suggestions (Select for Origin & Destination):
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDismissedHsCandidates(true)}
+                  style={{ fontSize: '0.72rem', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  Dismiss Suggestions
+                </button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {hsCandidates.slice(0, 3).map((cand) => (
-                  <button
-                    key={cand.code}
-                    type="button"
-                    onClick={() => {
-                      onSetFieldValue('hs_code', cand.code);
-                      handlePrimaryItemChange('hsCode', cand.code);
-                      if (cand.description) {
-                        onSetFieldValue('commodity_description', cand.description);
-                        handlePrimaryItemChange('description', cand.description);
-                      }
-                      setDismissedHsCandidates(true);
-                      setHsCandidates([]);
-                    }}
-                    style={{
-                      background: formData.hs_code === cand.code ? '#2563eb' : '#ffffff',
-                      color: formData.hs_code === cand.code ? '#ffffff' : '#1e293b',
-                      border: formData.hs_code === cand.code ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '0.35rem 0.65rem',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <span>{cand.code}</span>
-                    <span style={{ fontSize: '0.72rem', opacity: 0.85 }}>({cand.description})</span>
-                    {cand.confidence && <span style={{ fontSize: '0.7rem', background: '#dbeafe', color: '#1d4ed8', padding: '0.1rem 0.35rem', borderRadius: '4px' }}>{Math.round(cand.confidence * 100)}%</span>}
-                  </button>
-                ))}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {/* 🛫 Origin HS Code Suggestions */}
+                <div style={{ background: '#f0f6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '0.65rem 0.75rem' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    🛫 1. Select Origin HS Code ({originCountryName}):
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
+                    {finalOriginCandidates.map((cand, idx) => {
+                      const isSelected = (formData.origin_hs_code === cand.code || formData.hs_code === cand.code);
+                      return (
+                        <button
+                          key={`orig-${cand.code}-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            onSetFieldValue('origin_hs_code', cand.code);
+                            onSetFieldValue('hs_code', cand.code);
+                            handlePrimaryItemChange('hsCode', cand.code);
+                          }}
+                          style={{
+                            background: isSelected ? '#2563eb' : '#ffffff',
+                            color: isSelected ? '#ffffff' : '#1e293b',
+                            border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '0.4rem 0.65rem',
+                            fontSize: '0.76rem',
+                            fontWeight: 600,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.15rem',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.4rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '0.82rem' }}>{cand.code}</span>
+                              {idx === 0 && (
+                                <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isSelected ? '#fef08a' : '#fef9c3', color: isSelected ? '#854d0e' : '#a16207', border: '1px solid #fde047', padding: '0.05rem 0.3rem', borderRadius: '3px', textTransform: 'uppercase' }}>
+                                  ★ Top Match
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                              <span style={{ fontSize: '0.66rem', fontWeight: 700, background: isSelected ? 'rgba(255,255,255,0.25)' : '#dbeafe', color: isSelected ? '#ffffff' : '#1d4ed8', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
+                                {cand.country_name || 'Export Schedule'}
+                              </span>
+                              {cand.confidence !== undefined && (
+                                <span style={{ fontSize: '0.64rem', fontWeight: 800, background: isSelected ? 'rgba(255,255,255,0.2)' : '#e0f2fe', color: isSelected ? '#ffffff' : '#0369a1', padding: '0.05rem 0.3rem', borderRadius: '3px' }}>
+                                  {Math.round(cand.confidence * 100)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.7rem', opacity: isSelected ? 0.95 : 0.8, lineHeight: 1.25 }}>{cand.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 🛬 Destination HS Code Suggestions */}
+                <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '0.65rem 0.75rem' }}>
+                  <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    🛬 2. Select Destination HS Code ({destCountryName}):
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
+                    {finalDestCandidates.map((cand, idx) => {
+                      const isSelected = formData.destination_hs_code === cand.code;
+                      return (
+                        <button
+                          key={`dest-${cand.code}-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            onSetFieldValue('destination_hs_code', cand.code);
+                          }}
+                          style={{
+                            background: isSelected ? '#7e22ce' : '#ffffff',
+                            color: isSelected ? '#ffffff' : '#1e293b',
+                            border: isSelected ? '1.5px solid #7e22ce' : '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            padding: '0.4rem 0.65rem',
+                            fontSize: '0.76rem',
+                            fontWeight: 600,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.15rem',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.4rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '0.82rem' }}>{cand.code}</span>
+                              {idx === 0 && (
+                                <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isSelected ? '#fef08a' : '#fef9c3', color: isSelected ? '#854d0e' : '#a16207', border: '1px solid #fde047', padding: '0.05rem 0.3rem', borderRadius: '3px', textTransform: 'uppercase' }}>
+                                  ★ Top Match
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                              <span style={{ fontSize: '0.66rem', fontWeight: 700, background: isSelected ? 'rgba(255,255,255,0.25)' : '#f3e8ff', color: isSelected ? '#ffffff' : '#7e22ce', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
+                                {cand.country_name || 'Import Tariff'}
+                              </span>
+                              {cand.confidence !== undefined && (
+                                <span style={{ fontSize: '0.64rem', fontWeight: 800, background: isSelected ? 'rgba(255,255,255,0.2)' : '#f3e8ff', color: isSelected ? '#ffffff' : '#6b21a8', padding: '0.05rem 0.3rem', borderRadius: '3px' }}>
+                                  {Math.round(cand.confidence * 100)}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.7rem', opacity: isSelected ? 0.95 : 0.8, lineHeight: 1.25 }}>{cand.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -679,74 +820,7 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             ]}
             error={errors.currency}
           />
-
-          {/* <FormSelect
-            label="Load Type *"
-            name="load_type"
-            value={formData.load_type}
-            onChange={(e) => onSetFieldValue('load_type', e.target.value)}
-            options={[
-              { value: 'FCL', label: 'FCL - Full Container Load' },
-              { value: 'LCL', label: 'LCL - Less than Container Load' },
-              { value: 'AIR_STANDARD', label: 'Air Standard Freight' },
-            ]}
-            error={errors.load_type}
-          /> */}
         </div>
-
-        {/* AI Load Type Recommendation Strategy Banner
-        <div style={{ marginTop: '1rem' }}>
-          {isUnderThresholdForLCL ? (
-            <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', border: '1.5px solid #86efac', borderRadius: '10px', padding: '0.85rem 1.1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{ background: '#22c55e', color: '#ffffff', padding: '0.45rem', borderRadius: '8px', display: 'flex' }}>
-                    <Sparkles size={18} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, color: '#14532d', fontSize: '0.875rem' }}>
-                        AI Load Type Decision: Kept as LCL (Less than Container Load)
-                      </span>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#ffffff', color: '#15803d', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid #86efac' }}>
-                        Vol Util: {recVolumeUtilPercent.toFixed(1)}% | Weight Util: {recWeightUtilPercent.toFixed(1)}% (&lt; 75%)
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.78rem', color: '#166534', fontWeight: 500, display: 'block', marginTop: '0.2rem' }}>
-                      AI evaluated 1 container requirement with both Volume ({recVolumeUtilPercent.toFixed(1)}%) and Payload Weight ({recWeightUtilPercent.toFixed(1)}%) utilization below 75%. Kept as LCL for cost optimization.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)', border: '1.5px solid #93c5fd', borderRadius: '10px', padding: '0.85rem 1.1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.45rem', borderRadius: '8px', display: 'flex' }}>
-                    <Sparkles size={18} />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '0.875rem' }}>
-                        AI Load Type Decision: Converted to FCL (Full Container Load)
-                      </span>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, background: '#ffffff', color: '#1d4ed8', padding: '0.15rem 0.5rem', borderRadius: '4px', border: '1px solid #93c5fd' }}>
-                        Suggested Fleet: {aiRecommendation.equipmentMix ? aiRecommendation.equipmentMix.formattedMixString : `${aiRecommendation.containerCount}x ${aiRecommendation.containerType}`}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 500, display: 'block', marginTop: '0.2rem' }}>
-                      {aiRecommendation.containerCount > 1
-                        ? `AI predicted multiple container allocation (${aiRecommendation.containerCount} containers). Automatically converted Load Type from LCL to FCL.`
-                        : `Volume utilization (${recVolumeUtilPercent.toFixed(1)}%) or Payload Weight utilization (${recWeightUtilPercent.toFixed(1)}%) reached/exceeded 75%. Automatically converted Load Type from LCL to FCL.`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div> */}
-
 
         {/* Optional Multi-SKU Expander */}
         <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -870,7 +944,7 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
           <div>
             <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-              <Box size={20} className="text-indigo" /> 3. Package Dimensions & Gross Weight
+              <Box size={20} className="text-indigo" /> 2. Package Dimensions & Gross Weight
             </h3>
             <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0, marginTop: '0.15rem' }}>
               Define package count, dimensions (L × W × H cm), and auto-derive or override gross weight per package unit.
@@ -1479,6 +1553,159 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             💡 <strong>AI Rationale:</strong> {aiRecommendation.rationale}
           </div>
         </div>
+
+      {/* 3. Industrial Crating & Wood Packaging Material (WPM) Compliance */}
+      <div className="section-card" style={{ marginTop: '1.25rem' }}>
+        <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+          <PackageCheck size={20} className="text-indigo" /> 3. Industrial Crating & Wood Packaging (WPM) Compliance
+        </h3>
+
+        {/* Q1: Crating Service Required */}
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1rem 1.15rem', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1e293b', display: 'block' }}>
+                Is Industrial Crating Service Required? *
+              </span>
+              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                Custom export-standard wooden crating service for fragile, heavy, or sensitive cargo.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  onSetFieldValue('crating_service_required', true);
+                  onSetFieldValue('has_wood_packaging', false);
+                  onSetFieldValue('fumigation_certificate', true);
+                }}
+                style={{
+                  padding: '0.45rem 1.1rem',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  border: formData.crating_service_required ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                  background: formData.crating_service_required ? '#2563eb' : '#ffffff',
+                  color: formData.crating_service_required ? '#ffffff' : '#475569',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem'
+                }}
+              >
+                {formData.crating_service_required && <CheckCircle2 size={16} />} Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSetFieldValue('crating_service_required', false);
+                  onSetFieldValue('fumigation_certificate', false);
+                }}
+                style={{
+                  padding: '0.45rem 1.1rem',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  border: formData.crating_service_required === false ? '2px solid #64748b' : '1px solid #cbd5e1',
+                  background: formData.crating_service_required === false ? '#64748b' : '#ffffff',
+                  color: formData.crating_service_required === false ? '#ffffff' : '#475569',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                No
+              </button>
+            </div>
+          </div>
+
+          {/* YES Banner for Crating */}
+          {formData.crating_service_required && (
+            <div style={{ marginTop: '0.85rem', background: '#eff6ff', border: '1.5px solid #bfdbfe', padding: '0.75rem 1rem', borderRadius: '8px', color: '#1e40af', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+              <CheckCircle2 size={18} style={{ color: '#2563eb', flexShrink: 0 }} />
+              <div>
+                <strong>Crating Service Confirmed:</strong> Professional ISPM-15 compliant export crating and fumigation certificate will be provided. You may move forward!
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Q2: If Crating = NO, Ask Wood Packaging Material (WPM) Question */}
+        {formData.crating_service_required === false && (
+          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '12px', padding: '1rem 1.15rem', transition: 'all 0.2s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#9a3412', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <TreePine size={18} style={{ color: '#ea580c' }} /> Is the cargo packed with Wood Packaging Material (WPM)? *
+                </span>
+                <span style={{ fontSize: '0.78rem', color: '#c2410c' }}>
+                  Includes wooden pallets, skids, wooden boxes, crates, or wood dunnage.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSetFieldValue('has_wood_packaging', true);
+                    onSetFieldValue('fumigation_certificate', true);
+                  }}
+                  style={{
+                    padding: '0.45rem 1.1rem',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    border: formData.has_wood_packaging ? '2px solid #ea580c' : '1px solid #fdba74',
+                    background: formData.has_wood_packaging ? '#ea580c' : '#ffffff',
+                    color: formData.has_wood_packaging ? '#ffffff' : '#9a3412',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.35rem'
+                  }}
+                >
+                  {formData.has_wood_packaging && <CheckCircle2 size={16} />} Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSetFieldValue('has_wood_packaging', false);
+                    onSetFieldValue('fumigation_certificate', false);
+                  }}
+                  style={{
+                    padding: '0.45rem 1.1rem',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    border: formData.has_wood_packaging === false ? '2px solid #64748b' : '1px solid #cbd5e1',
+                    background: formData.has_wood_packaging === false ? '#64748b' : '#ffffff',
+                    color: formData.has_wood_packaging === false ? '#ffffff' : '#475569',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            {/* WPM YES Alert: Certificate Required */}
+            {formData.has_wood_packaging && (
+              <div style={{ marginTop: '0.85rem', background: '#fef2f2', border: '1.5px solid #fca5a5', padding: '0.85rem 1rem', borderRadius: '8px', color: '#991b1b', fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, fontSize: '0.86rem', color: '#b91c1c', marginBottom: '0.25rem' }}>
+                  <AlertTriangle size={18} style={{ color: '#dc2626', flexShrink: 0 }} />
+                  <span>ISPM-15 Phytosanitary / Fumigation Certificate Required!</span>
+                </div>
+                <p style={{ margin: 0, lineHeight: 1.4, color: '#7f1d1d' }}>
+                  Because wooden packaging material (WPM) is used, an official <strong>ISPM-15 Heat Treatment / Fumigation Certificate</strong> with heat-treatment stamp is mandatory for international customs clearance at origin and destination ports.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
