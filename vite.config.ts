@@ -1,12 +1,98 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
-import { SYSTEM_PROMPT_CARGO_SPECS } from './src/constants/aiPrompts.js';
+import { SYSTEM_PROMPT_CARGO_SPECS, SYSTEM_PROMPT_SHIPMENT_DESCRIPTION_PARSER } from './src/constants/aiPrompts.js';
 
-// Vite Plugin for Gemini AI Backend Endpoint (/api/gemini-recommend)
+// Vite Plugin for Gemini AI Backend Endpoints (/api/gemini-recommend, /api/gemini-parse-description, /api/gemini-cargo-specs)
 const geminiBackendPlugin = (): Plugin => ({
   name: 'gemini-equipment-backend',
   configureServer(server) {
     server.middlewares.use(async (req, res, next) => {
+      if (req.url === '/api/gemini-parse-description') {
+        if (req.method === 'GET') {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              status: 'online',
+              endpoint: '/api/gemini-parse-description',
+              methods: ['POST', 'GET'],
+              description: 'SmartRFQ Gemini AI Natural Language Description Parsing Service',
+              gemini_api_key_configured: Boolean(
+                process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY
+              ),
+            })
+          );
+          return;
+        }
+
+        if (req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk) => {
+            body += chunk;
+          });
+
+          req.on('end', async () => {
+            try {
+              const payload = JSON.parse(body);
+              const userPrompt = payload.prompt || payload.descriptionText || '';
+              const apiKey =
+                process.env.GEMINI_API_KEY ||
+                process.env.VITE_GEMINI_API_KEY ||
+                (req.headers['x-gemini-key'] as string);
+
+              const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+              if (apiKey && apiKey.trim().length > 0) {
+                try {
+                  const geminiRes = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey.trim()}`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        systemInstruction: {
+                          parts: [{ text: SYSTEM_PROMPT_SHIPMENT_DESCRIPTION_PARSER }],
+                        },
+                        contents: [
+                          {
+                            role: 'user',
+                            parts: [{ text: `Extract RFQ form parameters from description:\n"${userPrompt}"` }],
+                          },
+                        ],
+                        generationConfig: {
+                          responseMimeType: 'application/json',
+                        },
+                      }),
+                    }
+                  );
+
+                  if (geminiRes.ok) {
+                    const data = (await geminiRes.json()) as any;
+                    const textResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (textResponse) {
+                      const parsed = JSON.parse(textResponse);
+                      res.setHeader('Content-Type', 'application/json');
+                      res.end(JSON.stringify(parsed));
+                      return;
+                    }
+                  }
+                } catch (geminiErr) {
+                  console.warn('Gemini Description Parsing API call exception:', geminiErr);
+                }
+              }
+
+              // Fallback response if no key configured
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ rawDescription: userPrompt, extracted_summary: 'AI Server Proxy Online (Ready for Gemini Key)' }));
+            } catch (err: any) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'Invalid input payload', message: err.message }));
+            }
+          });
+          return;
+        }
+      }
+
       if (req.url === '/api/gemini-recommend') {
         if (req.method === 'GET') {
           res.statusCode = 200;

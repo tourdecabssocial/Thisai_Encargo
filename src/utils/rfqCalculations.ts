@@ -113,26 +113,32 @@ export const calculateTareWeightKg = (grossWeightKg: number, netWeightKg: number
 
 // Cross-Validation Reconciliation: Commercial Items vs Package Descriptions
 export const reconcileItemsAndPackages = (
-  commercialItems: CommercialItem[],
-  packages: PackageCard[]
+  commercialItems: CommercialItem[] = [],
+  packages: PackageCard[] = []
 ): ItemReconciliationResult => {
   const mismatches: string[] = [];
+  const safeItems = Array.isArray(commercialItems) ? commercialItems : [];
+  const safePackages = Array.isArray(packages) ? packages : [];
 
-  if (commercialItems.length === 0) {
+  if (safeItems.length === 0) {
     return { passed: true, mismatches: [] };
   }
 
   // 1. Item Presence Check: Every commercial item must exist in at least one package description
-  const allPackedDescriptionsList = packages.flatMap((pkg) => pkg.packedItemDescriptions.map((d) => d.trim().toLowerCase()));
+  const allPackedDescriptionsList = safePackages.flatMap((pkg) =>
+    Array.isArray(pkg?.packedItemDescriptions)
+      ? pkg.packedItemDescriptions.map((d) => (d ? String(d).trim().toLowerCase() : ''))
+      : []
+  );
 
-  commercialItems.forEach((item) => {
-    const itemDescLower = item.description.trim().toLowerCase();
+  safeItems.forEach((item) => {
+    const itemDescLower = (item?.description || '').trim().toLowerCase();
     if (!itemDescLower) return;
 
     // Check exact match, substring match, or single package fallback
     const hasMatch =
       allPackedDescriptionsList.length === 0 ||
-      packages.length === 1 ||
+      safePackages.length === 1 ||
       allPackedDescriptionsList.some(
         (packed) => packed === itemDescLower || packed.includes(itemDescLower) || itemDescLower.includes(packed)
       );

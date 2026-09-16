@@ -124,13 +124,49 @@ const INITIAL_FORM_DATA: RFQFormData = {
   ],
 };
 
+export type FormEntryMode = 'selection' | 'regular' | 'ai_autofill';
+
 export function useRFQForm() {
   const [formData, setFormData] = useState<RFQFormData>(INITIAL_FORM_DATA);
+  const [entryMode, setEntryMode] = useState<FormEntryMode>('selection');
   const [activeStep, setActiveStep] = useState<number>(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [submittedRecord, setSubmittedData] = useState<SubmittedRFQRecord | null>(null);
+  const [aiExtractionBanner, setAiExtractionBanner] = useState<string | null>(null);
+
+  const selectEntryMode = (mode: FormEntryMode) => {
+    setEntryMode(mode);
+    if (mode === 'regular') {
+      setActiveStep(1);
+    }
+  };
+
+  const applyAIExtractedFields = (fields: Partial<RFQFormData>, summaryMsg: string) => {
+    setFormData((prev) => {
+      const updated = { ...prev, ...fields };
+      if (fields.from_address_id) {
+        const found = mockAddresses.find((a) => a.id === fields.from_address_id);
+        if (found) {
+          updated.from_address = found;
+          updated.originCountry = found.countryCode || 'IN';
+        }
+      }
+      if (fields.to_address_id) {
+        const found = mockAddresses.find((a) => a.id === fields.to_address_id);
+        if (found) {
+          updated.to_address = found;
+          updated.destCountry = found.countryCode || 'US';
+        }
+      }
+      return updated;
+    });
+
+    setAiExtractionBanner(summaryMsg);
+    setEntryMode('regular');
+    setActiveStep(1);
+  };
 
   // Sync service_scope with allowed Incoterms
   useEffect(() => {
@@ -429,6 +465,8 @@ export function useRFQForm() {
 
   const resetForm = () => {
     setFormData(INITIAL_FORM_DATA);
+    setEntryMode('selection');
+    setAiExtractionBanner(null);
     setActiveStep(1);
     setErrors({});
     setIsSubmitted(false);
@@ -437,6 +475,12 @@ export function useRFQForm() {
 
   return {
     formData,
+    entryMode,
+    setEntryMode,
+    selectEntryMode,
+    aiExtractionBanner,
+    setAiExtractionBanner,
+    applyAIExtractedFields,
     activeStep,
     setActiveStep,
     errors,
