@@ -25,9 +25,15 @@ import './ShipmentLifecycleRouteCard.css';
 
 interface ShipmentLifecycleRouteCardProps {
   input: LifecycleEngineInput;
+  selectedStageIndex?: number;
+  onSelectStage?: (index: number) => void;
 }
 
-export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProps> = ({ input }) => {
+export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProps> = ({
+  input,
+  selectedStageIndex,
+  onSelectStage,
+}) => {
   const stages = generateShipmentRouteLifecycle(input);
   const tradeLane = resolveTradeLane(input.originPortOrCity, input.destinationPortOrCity);
   const hsCompliance = getHSChapterComplianceFromSchema(input.hsCode, tradeLane);
@@ -163,23 +169,35 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
       {/* Vertical Interactive Timeline Map */}
       <div className="vertical-timeline-container">
         {filteredStages.map((stage, idx) => {
-          const isExpanded = expandedStageIds.includes(stage.id);
+          const isSelected = selectedStageIndex === idx;
+          const isExpanded = expandedStageIds.includes(stage.id) || isSelected;
           const isLast = idx === filteredStages.length - 1;
+
+          const handleHeaderClick = () => {
+            if (onSelectStage) {
+              onSelectStage(idx);
+            }
+            toggleStage(stage.id);
+          };
 
           return (
             <div
               key={stage.id}
-              className={`timeline-stage-wrapper ${isExpanded ? 'expanded' : ''}`}
+              className={`timeline-stage-wrapper ${isExpanded ? 'expanded' : ''} ${isSelected ? 'active-selected-stage' : ''}`}
             >
               {!isLast && <div className="timeline-connecting-line" />}
 
-              <div className="timeline-stage-card">
-                {/* Clickable Accordion Header */}
+              <div
+                className="timeline-stage-card"
+                style={isSelected ? { borderColor: '#2563eb', boxShadow: '0 0 0 3px rgba(37,99,235,0.2)' } : undefined}
+              >
+                {/* Clickable Stage Header */}
                 <div
                   className="stage-card-header"
-                  onClick={() => toggleStage(stage.id)}
+                  onClick={handleHeaderClick}
                   role="button"
                   tabIndex={0}
+                  style={isSelected ? { background: '#f0f6ff' } : undefined}
                 >
                   <div className="stage-header-left">
                     <div className="stage-node-badge">

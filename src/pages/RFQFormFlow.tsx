@@ -9,7 +9,7 @@ import { ShipmentLifecycleRouteCard } from '../components/rfq/ShipmentLifecycleR
 import { AssociatePostSubmissionPortal } from '../components/rfq/AssociatePostSubmissionPortal';
 import { Button } from '../components/ui/Button';
 import { parseShipmentDescriptionWithAI } from '../services/aiDescriptionParserService';
-import { ArrowLeft, ArrowRight, Send, Layers, Check, Sparkles, ClipboardList, FileText, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send, Layers, Check, Sparkles, ClipboardList, FileText, RotateCcw, CheckCircle2 } from 'lucide-react';
 import './RFQFormFlow.css';
 
 export const RFQFormFlow: React.FC = () => {
@@ -43,6 +43,7 @@ export const RFQFormFlow: React.FC = () => {
     'Hi, i want to transport 15 box of carrots from Chennai, India to Simivally, US, which the boxs are 90*20*100 h*w*l respectively. Want FCL only with 20ft Reefer container, DDP incoterm, need insurance coverage and customs clearance.'
   );
   const [isParsingAI, setIsParsingAI] = useState<boolean>(false);
+  const [selectedStageIndex, setSelectedStageIndex] = useState<number>(0);
 
   const handleRunAIExtraction = async () => {
     if (!descriptionInput.trim()) return;
@@ -56,10 +57,6 @@ export const RFQFormFlow: React.FC = () => {
       setIsParsingAI(false);
     }
   };
-
-  if (isSubmitted && submittedRecord) {
-    return <AssociatePostSubmissionPortal record={submittedRecord} onReset={resetForm} />;
-  }
 
   // Dynamic Selected Address & Port Labels Resolution for Flow Diagrams & Cards
   const getAddressLabel = (addrObj: any, addrId?: string) => {
@@ -86,61 +83,127 @@ export const RFQFormFlow: React.FC = () => {
     formData.to_port_name ||
     (formData.to_port_code ? `${formData.to_port_code} Port` : 'Destination Port');
 
+  // Dynamic parameters for top Route Visualizer & Header
+  const displayMode = isSubmitted && submittedRecord
+    ? (((submittedRecord.payload as any).mode === 'Air' ? 'Air' : 'Ship') as 'Air' | 'Ship')
+    : formData.mode;
+  const displayScope = isSubmitted && submittedRecord
+    ? (submittedRecord.payload as any).service_scope
+    : formData.service_scope;
+  const displayFrom = isSubmitted && submittedRecord
+    ? (getAddressLabel((submittedRecord.payload as any).from_address, (submittedRecord.payload as any).from_address_id) || fromAddrLabel)
+    : fromAddrLabel;
+  const displayTo = isSubmitted && submittedRecord
+    ? (getAddressLabel((submittedRecord.payload as any).to_address, (submittedRecord.payload as any).to_address_id) || toAddrLabel)
+    : toAddrLabel;
+  const displayOrigin = isSubmitted && submittedRecord
+    ? ((submittedRecord.payload as any).origin_port_name || (submittedRecord.payload as any).from_port_name || ((submittedRecord.payload as any).from_port_code ? `${(submittedRecord.payload as any).from_port_code} Port` : originPortLabel))
+    : originPortLabel;
+  const displayDest = isSubmitted && submittedRecord
+    ? ((submittedRecord.payload as any).destination_port_name || (submittedRecord.payload as any).to_port_name || ((submittedRecord.payload as any).to_port_code ? `${(submittedRecord.payload as any).to_port_code} Port` : destPortLabel))
+    : destPortLabel;
+
+  // Unified Route Card Input for both pre-submission and post-submission views
+  const subPayload = isSubmitted && submittedRecord ? (submittedRecord.payload as any) : null;
+  const routeCardInput = subPayload
+    ? {
+        transportMode: (subPayload.mode === 'Air' ? 'Air' : 'Ship') as 'Air' | 'Ship',
+        serviceType: (subPayload.service_scope === 'D2D'
+          ? 'Door-to-Door'
+          : subPayload.service_scope === 'P2P'
+          ? 'Port-to-Port'
+          : subPayload.service_scope === 'D2P'
+          ? 'Door-to-Port'
+          : 'Port-to-Door') as any,
+        originPortOrCity: displayFrom || displayOrigin,
+        destinationPortOrCity: displayTo || displayDest,
+        isHazmat: Boolean(subPayload.hazardous_materials),
+        isReefer: Boolean(subPayload.temperature_control_required),
+        incoterm: subPayload.incoterm || 'DDP',
+        hsCode: subPayload.hs_code || subPayload.hsCode || '',
+      }
+    : {
+        transportMode: (formData.mode === 'Air' ? 'Air' : 'Ship') as 'Air' | 'Ship',
+        serviceType: (formData.service_scope === 'D2D'
+          ? 'Door-to-Door'
+          : formData.service_scope === 'P2P'
+          ? 'Port-to-Port'
+          : formData.service_scope === 'D2P'
+          ? 'Door-to-Port'
+          : 'Port-to-Door') as any,
+        originPortOrCity: fromAddrLabel || originPortLabel,
+        destinationPortOrCity: toAddrLabel || destPortLabel,
+        isHazmat: Boolean(formData.hazardous_materials),
+        isReefer: Boolean(formData.temperature_control_required),
+        incoterm: formData.incoterm || 'DDP',
+        hsCode: formData.hs_code || (formData as any).hsCode || '',
+      };
+
   return (
     <div className="rfq-flow-page animate-fade-in">
+      {/* Shared RFQ Header */}
       <div className="rfq-flow-header">
         <div className="rfq-title-group">
           <div className="rfq-title-row">
             <h1 className="rfq-main-title">Request For Quote (RFQ) Form</h1>
-            <div className="rfq-badge">
-              <Layers size={13} /> Smart Freight Engine
-            </div>
+            {isSubmitted && submittedRecord ? (
+              <div className="rfq-badge" style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
+                <CheckCircle2 size={13} /> RFQ Submitted (ID: {submittedRecord.referenceNo})
+              </div>
+            ) : (
+              <div className="rfq-badge">
+                <Layers size={13} /> Smart Freight Engine
+              </div>
+            )}
           </div>
           <p className="rfq-subtitle">
             Configure transport mode, service scope, commodity specs, Incoterms, and customs options.
           </p>
         </div>
+
+        {isSubmitted && submittedRecord && (
+          <Button variant="secondary" onClick={resetForm} leftIcon={<RotateCcw size={16} />}>
+            Create New RFQ
+          </Button>
+        )}
       </div>
 
-      {/* End-to-End Visual Shipment Flow Diagram (Adapts to Transport Mode & Scope) */}
+      {/* Shared End-to-End Visual Shipment Flow Diagram */}
       <div className="rfq-flow-visualizer-sticky-wrapper">
         <ShipmentFlowVisualizer
-          mode={formData.mode}
-          serviceScope={formData.service_scope}
-          fromAddress={fromAddrLabel}
-          toAddress={toAddrLabel}
-          originName={originPortLabel}
-          destName={destPortLabel}
-          currentStep={activeStep}
+          mode={displayMode}
+          serviceScope={displayScope}
+          fromAddress={displayFrom}
+          toAddress={displayTo}
+          originName={displayOrigin}
+          destName={displayDest}
+          currentStep={isSubmitted ? 3 : activeStep}
         />
       </div>
 
-      {/* Main Flow Layout: Left Route Planner + Form Wizard + Right Live Summary */}
+      {/* Main Flow Layout: Left Route Planner + Main Content Area */}
       <div className="rfq-flow-grid">
-        {/* Left Sidebar Pane: AI Shipment Route & Stage Documentation Map */}
+        {/* Left Sidebar Pane: AI Shipment Route & Stage Documentation Map (Active in both Pre and Post Submission) */}
         <aside className="rfq-left-pane">
           <ShipmentLifecycleRouteCard
-            input={{
-              transportMode: formData.mode === 'Air' ? 'Air' : 'Ship',
-              serviceType:
-                formData.service_scope === 'D2D'
-                  ? 'Door-to-Door'
-                  : formData.service_scope === 'P2P'
-                  ? 'Port-to-Port'
-                  : formData.service_scope === 'D2P'
-                  ? 'Door-to-Port'
-                  : 'Port-to-Door',
-              originPortOrCity: fromAddrLabel || originPortLabel,
-              destinationPortOrCity: toAddrLabel || destPortLabel,
-              isHazmat: Boolean(formData.hazardous_materials),
-              isReefer: Boolean(formData.temperature_control_required),
-              incoterm: formData.incoterm || 'DDP',
-              hsCode: formData.hs_code || (formData as any).hsCode || '',
-            }}
+            input={routeCardInput}
+            selectedStageIndex={selectedStageIndex}
+            onSelectStage={(idx) => setSelectedStageIndex(idx)}
           />
         </aside>
 
-        <form onSubmit={(e) => e.preventDefault()} noValidate className="rfq-form-card">
+        {isSubmitted && submittedRecord ? (
+          <div className="rfq-post-submission-pane" style={{ gridColumn: '2 / -1' }}>
+            <AssociatePostSubmissionPortal
+              record={submittedRecord}
+              onReset={resetForm}
+              selectedStageIndex={selectedStageIndex}
+              onSelectStageIndex={setSelectedStageIndex}
+            />
+          </div>
+        ) : (
+          <>
+            <form onSubmit={(e) => e.preventDefault()} noValidate className="rfq-form-card">
           {entryMode === 'selection' ? (
             <>
               <div className="rfq-card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.35rem' }}>
@@ -560,6 +623,8 @@ export const RFQFormFlow: React.FC = () => {
             volumetricWeight={volumetricWeight}
           />
         </aside>
+      </>
+      )}
       </div>
     </div>
   );

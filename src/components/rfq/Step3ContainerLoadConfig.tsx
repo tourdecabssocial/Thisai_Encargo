@@ -268,8 +268,8 @@ export const Step3ContainerLoadConfig: React.FC<Step3Props> = ({
                 onChange={onChange}
                 options={[
                   { value: 'Thisai Customs Broker', label: 'Thisai Customs Broker (Recommended - Fast Track)' },
-                  { value: 'Customer Broker', label: "Hari - Customer's Customs Broker" },
-                  { value: 'Customer Broker', label: "Kavitha - Customer's Customs Broker" },
+                  { value: 'Customer Broker Hari', label: "Hari - Customer's Customs Broker" },
+                  { value: 'Customer Broker Kavitha', label: "Kavitha - Customer's Customs Broker" },
                 ]}
                 error={errors.origin_customs_broker}
               />
@@ -311,8 +311,8 @@ export const Step3ContainerLoadConfig: React.FC<Step3Props> = ({
                 onChange={onChange}
                 options={[
                   { value: 'Thisai Customs Broker', label: 'Thisai Customs Broker (Recommended - Fast Track)' },
-                  { value: 'Customer Broker', label: "Diana - Customer's Customs Broker" },
-                  { value: 'Customer Broker', label: "Sham - Customer's Customs Broker" },
+                  { value: 'Customer Broker Diana', label: "Diana - Customer's Customs Broker" },
+                  { value: 'Customer Broker Sham', label: "Sham - Customer's Customs Broker" },
                 ]}
                 error={errors.destination_customs_broker}
               />

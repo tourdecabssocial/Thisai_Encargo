@@ -18,7 +18,7 @@ import {
   calculateVolumetricWeight,
   calculateChargeableWeightKg,
 } from '../../utils/rfqCalculations';
-import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, IndianRupee, Euro, PoundSterling, JapaneseYen, PackageCheck, Layers, Scale, Sparkles, ChevronDown, ChevronUp, Info, TreePine, AlertTriangle } from 'lucide-react';
+import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, IndianRupee, Euro, PoundSterling, JapaneseYen, PackageCheck, Layers, Scale, Sparkles, ChevronDown, ChevronUp, Info, TreePine, AlertTriangle, Truck } from 'lucide-react';
 import './Step2CargoPackages.css';
 
 const getCurrencySymbol = (currency: string = 'USD'): string => {
@@ -430,6 +430,19 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
     aiRecommendation.containerCount,
     recSpec.cbmCapacity,
   ]);
+
+  // Auto-sync Container Stuffing & Loading Method (loading_type) based on Load Type
+  useEffect(() => {
+    if (formData.load_type === 'LCL') {
+      if (formData.loading_type !== 'CFS Loading') {
+        onSetFieldValue('loading_type', 'CFS Loading');
+      }
+    } else if (formData.load_type === 'FCL') {
+      if (!formData.loading_type) {
+        onSetFieldValue('loading_type', 'CFS Loading');
+      }
+    }
+  }, [formData.load_type, formData.loading_type, onSetFieldValue]);
 
 
 
@@ -1553,6 +1566,40 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
             💡 <strong>AI Rationale:</strong> {aiRecommendation.rationale}
           </div>
         </div>
+
+      {/* 5. Container Stuffing & Loading Method Dropdown (Load Type Selection) */}
+      <div
+        className="section-card"
+        style={{
+          marginTop: '1.25rem',
+          background: '#ffffff',
+          border: '1.5px solid #cbd5e1',
+          borderRadius: '12px',
+          padding: '1.15rem 1.25rem',
+        }}
+      >
+        <FormSelect
+          label="Container Stuffing & Loading Method *"
+          name="loading_type"
+          icon={<Truck size={18} />}
+          value={formData.load_type === 'LCL' ? 'CFS Loading' : (formData.loading_type || 'CFS Loading')}
+          onChange={(e) => onSetFieldValue('loading_type', e.target.value)}
+          options={
+            formData.load_type === 'LCL'
+              ? [{ value: 'CFS Loading', label: 'CFS Loading (Container Freight Station Default)' }]
+              : [
+                  { value: 'CFS Loading', label: 'CFS Loading (Container Freight Station)' },
+                  { value: 'Live Loading', label: 'Live Loading (Factory / Warehouse Door Loading)' },
+                ]
+          }
+          disabled={formData.load_type === 'LCL'}
+          helperText={
+            formData.load_type === 'LCL'
+              ? 'LCL cargo is consolidated at the port CFS warehouse by default. No alternative loading options apply.'
+              : 'Select your preferred container loading method for FCL shipment.'
+          }
+        />
+      </div>
 
       {/* 3. Industrial Crating & Wood Packaging Material (WPM) Compliance */}
       <div className="section-card" style={{ marginTop: '1.25rem' }}>

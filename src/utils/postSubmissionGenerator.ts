@@ -6,10 +6,11 @@ import {
   getSpecialServiceDocumentsFromSchema,
   resolveTradeLane,
 } from '../services/cargoDocService';
+import { generateSchemaQuotesForStage } from '../services/cargoChargesService';
 
 /**
  * Dynamically generates post-submission shipment stages, rates, and stage document checklists
- * strictly driven by the master schema in Cargo Doc.json and user submitted RFQ details.
+ * strictly driven by the master schemas in Cargo Doc.json and Encargo_charges.json based on user submitted RFQ details.
  */
 export const generateDynamicPostSubmissionStages = (
   record: SubmittedRFQRecord
@@ -61,7 +62,7 @@ export const generateDynamicPostSubmissionStages = (
     return docs;
   };
 
-  // 1. First Mile Trucking (Stage 1 in Cargo Doc.json)
+  // 1. First Mile Trucking (Stage 1 in Cargo Doc.json & Encargo_charges.json)
   if (scope === 'D2D' || scope === 'D2P' || Boolean(p.from_address)) {
     const stage1Extra: string[] = [];
     if (hsCompliance && hsCompliance.exportAgencyDocs.length > 0) {
@@ -77,55 +78,12 @@ export const generateDynamicPostSubmissionStages = (
       category: 'first_mile',
       locationInfo: `${originText} → ${originPortText}`,
       iconType: 'truck',
-      quotes: [
-        {
-          id: 'q-fm-1',
-          type: 'third_party',
-          providerName: 'Chennai FastTrack Logistics (3rd Party)',
-          baseRate: 450,
-          markupType: 'flat',
-          markupValue: 50,
-          markupCalculatedAmount: 50,
-          finalRate: 500,
-          transitTime: '1 Day',
-          validUntil: '2026-10-15',
-          notes: 'Standard 40ft container flatbed trailer pickup with driver tracking.',
-          isSelected: true,
-        },
-        {
-          id: 'q-fm-2',
-          type: 'third_party',
-          providerName: 'TCI Freight Express (3rd Party)',
-          baseRate: 520,
-          markupType: 'flat',
-          markupValue: 0,
-          markupCalculatedAmount: 0,
-          finalRate: 520,
-          transitTime: '1 Day',
-          validUntil: '2026-10-20',
-          notes: 'Includes 2 hours free loading time at warehouse.',
-          isSelected: false,
-        },
-        {
-          id: 'q-fm-3',
-          type: 'thisai',
-          providerName: 'THISAI Fleet Direct Rate',
-          baseRate: 480,
-          markupType: 'flat',
-          markupValue: 0,
-          markupCalculatedAmount: 0,
-          finalRate: 480,
-          transitTime: 'Same Day',
-          validUntil: '2026-12-31',
-          notes: 'Dedicated THISAI partner fleet vehicle with real-time GPS telemetry.',
-          isSelected: false,
-        },
-      ],
+      quotes: generateSchemaQuotesForStage(1, record, 'First Mile Trucking'),
       documents: buildStageDocumentsFromSchema(1, stage1Extra),
     });
   }
 
-  // 2. Origin Port Handling & Export Customs (Stage 2 in Cargo Doc.json)
+  // 2. Origin Port Handling & Export Customs (Stage 2 in Cargo Doc.json & Encargo_charges.json)
   if (scope !== 'P2P' || p.origin_customs_clearance) {
     const stage2Extra: string[] = [];
     if (p.hazardous_materials) {
@@ -138,41 +96,12 @@ export const generateDynamicPostSubmissionStages = (
       category: 'origin_customs',
       locationInfo: `${originPortText} Terminal`,
       iconType: 'customs',
-      quotes: [
-        {
-          id: 'q-oc-1',
-          type: 'third_party',
-          providerName: 'Madras Terminal & Customs Services (3rd Party)',
-          baseRate: 380,
-          markupType: 'flat',
-          markupValue: 40,
-          markupCalculatedAmount: 40,
-          finalRate: 420,
-          transitTime: '1-2 Days',
-          validUntil: '2026-10-30',
-          notes: 'Includes export documentation, THC, and customs filing.',
-          isSelected: true,
-        },
-        {
-          id: 'q-oc-2',
-          type: 'thisai',
-          providerName: 'THISAI Export Customs Clearance',
-          baseRate: 350,
-          markupType: 'flat',
-          markupValue: 0,
-          markupCalculatedAmount: 0,
-          finalRate: 350,
-          transitTime: '1 Day',
-          validUntil: '2026-12-31',
-          notes: 'In-house licensed THISAI customs broker team.',
-          isSelected: false,
-        },
-      ],
+      quotes: generateSchemaQuotesForStage(2, record, 'Export Customs & Port Services'),
       documents: buildStageDocumentsFromSchema(2, stage2Extra),
     });
   }
 
-  // 3. Main Haul Freight (Stage 3 in Cargo Doc.json)
+  // 3. Main Haul Freight (Stage 3 in Cargo Doc.json & Encargo_charges.json)
   const mainHaulName = isAir
     ? 'Main Haul – Air Freight Express'
     : `Main Haul – Ocean Freight (${p.load_type || 'FCL'})`;
@@ -188,99 +117,11 @@ export const generateDynamicPostSubmissionStages = (
     category: 'main_haul',
     locationInfo: `${originPortText} → ${destPortText}`,
     iconType: isAir ? 'plane' : 'ship',
-    quotes: isAir
-      ? [
-          {
-            id: 'q-mh-air-1',
-            type: 'third_party',
-            providerName: 'Emirates SkyCargo (3rd Party)',
-            baseRate: 4200,
-            markupType: 'flat',
-            markupValue: 350,
-            markupCalculatedAmount: 350,
-            finalRate: 4550,
-            transitTime: '2-3 Days',
-            validUntil: '2026-10-10',
-            notes: 'Direct priority express flight space allocation.',
-            isSelected: true,
-          },
-          {
-            id: 'q-mh-air-2',
-            type: 'third_party',
-            providerName: 'Cathay Cargo Express (3rd Party)',
-            baseRate: 4050,
-            markupType: 'flat',
-            markupValue: 300,
-            markupCalculatedAmount: 300,
-            finalRate: 4350,
-            transitTime: '3-4 Days',
-            validUntil: '2026-10-15',
-            notes: 'Standard air freight schedule via transit hub.',
-            isSelected: false,
-          },
-          {
-            id: 'q-mh-air-3',
-            type: 'thisai',
-            providerName: 'THISAI Air Charter Block Rate',
-            baseRate: 4100,
-            markupType: 'flat',
-            markupValue: 0,
-            markupCalculatedAmount: 0,
-            finalRate: 4100,
-            transitTime: '2 Days',
-            validUntil: '2026-12-31',
-            notes: 'Guaranteed space contract with automated tracking.',
-            isSelected: false,
-          },
-        ]
-      : [
-          {
-            id: 'q-mh-sea-1',
-            type: 'third_party',
-            providerName: 'Maersk Line Ocean Carrier (3rd Party)',
-            baseRate: 2850,
-            markupType: 'flat',
-            markupValue: 250,
-            markupCalculatedAmount: 250,
-            finalRate: 3100,
-            transitTime: '18-22 Days',
-            validUntil: '2026-10-25',
-            notes: `Direct liner service for ${p.container_count || 1}x ${p.container_type || '20GP'} container.`,
-            isSelected: true,
-          },
-          {
-            id: 'q-mh-sea-2',
-            type: 'third_party',
-            providerName: 'MSC Mediterranean Shipping (3rd Party)',
-            baseRate: 2720,
-            markupType: 'flat',
-            markupValue: 200,
-            markupCalculatedAmount: 200,
-            finalRate: 2920,
-            transitTime: '20-24 Days',
-            validUntil: '2026-10-30',
-            notes: 'Includes 14 days free demurrage at destination port.',
-            isSelected: false,
-          },
-          {
-            id: 'q-mh-sea-3',
-            type: 'thisai',
-            providerName: 'THISAI Preferred Carrier Contract Rate',
-            baseRate: 2800,
-            markupType: 'flat',
-            markupValue: 0,
-            markupCalculatedAmount: 0,
-            finalRate: 2800,
-            transitTime: '19 Days',
-            validUntil: '2026-12-31',
-            notes: 'THISAI direct volume tier contract pricing.',
-            isSelected: false,
-          },
-        ],
+    quotes: generateSchemaQuotesForStage(3, record, isAir ? 'Air Freight' : 'Ocean Freight'),
     documents: buildStageDocumentsFromSchema(3, stage3Extra),
   });
 
-  // 4. Destination Customs & Import Clearance (Stage 4 in Cargo Doc.json)
+  // 4. Destination Customs & Import Clearance (Stage 4 in Cargo Doc.json & Encargo_charges.json)
   if (scope === 'D2D' || scope === 'P2D' || p.destination_customs_clearance) {
     const stage4Extra: string[] = [];
     if (hsCompliance && hsCompliance.importAgencyDocs.length > 0) {
@@ -293,41 +134,12 @@ export const generateDynamicPostSubmissionStages = (
       category: 'dest_customs',
       locationInfo: `${destPortText} Port`,
       iconType: 'customs',
-      quotes: [
-        {
-          id: 'q-dc-1',
-          type: 'third_party',
-          providerName: 'NY Customs Clearance Services (3rd Party)',
-          baseRate: 620,
-          markupType: 'flat',
-          markupValue: 80,
-          markupCalculatedAmount: 80,
-          finalRate: 700,
-          transitTime: '1-2 Days',
-          validUntil: '2026-10-30',
-          notes: 'Includes US CBP entry filing, ISF 10+2, and duty processing.',
-          isSelected: true,
-        },
-        {
-          id: 'q-dc-2',
-          type: 'thisai',
-          providerName: 'THISAI US Import Brokerage',
-          baseRate: 590,
-          markupType: 'flat',
-          markupValue: 0,
-          markupCalculatedAmount: 0,
-          finalRate: 590,
-          transitTime: '1 Day',
-          validUntil: '2026-12-31',
-          notes: 'Automated ISF filing and direct CBP portal submission.',
-          isSelected: false,
-        },
-      ],
+      quotes: generateSchemaQuotesForStage(4, record, 'Import Customs & Port Services'),
       documents: buildStageDocumentsFromSchema(4, stage4Extra),
     });
   }
 
-  // 5. Last Mile Delivery – Trucking (Stage 5 in Cargo Doc.json)
+  // 5. Last Mile Delivery – Trucking (Stage 5 in Cargo Doc.json & Encargo_charges.json)
   if (scope === 'D2D' || scope === 'P2D' || Boolean(p.to_address)) {
     stages.push({
       id: 'stage-last-mile',
@@ -335,50 +147,7 @@ export const generateDynamicPostSubmissionStages = (
       category: 'last_mile',
       locationInfo: `${destPortText} → ${destText}`,
       iconType: 'truck',
-      quotes: [
-        {
-          id: 'q-lm-1',
-          type: 'third_party',
-          providerName: 'Simi Valley Drayage & Trucking (3rd Party)',
-          baseRate: 750,
-          markupType: 'flat',
-          markupValue: 75,
-          markupCalculatedAmount: 75,
-          finalRate: 825,
-          transitTime: '1 Day',
-          validUntil: '2026-10-20',
-          notes: 'Includes port drayage, chassis rental, and door unloading.',
-          isSelected: true,
-        },
-        {
-          id: 'q-lm-2',
-          type: 'third_party',
-          providerName: 'US Xpress Interstate Hauling (3rd Party)',
-          baseRate: 820,
-          markupType: 'flat',
-          markupValue: 50,
-          markupCalculatedAmount: 50,
-          finalRate: 870,
-          transitTime: '1 Day',
-          validUntil: '2026-10-25',
-          notes: 'Liftgate equipped truck delivery.',
-          isSelected: false,
-        },
-        {
-          id: 'q-lm-3',
-          type: 'thisai',
-          providerName: 'THISAI Partner Delivery Network',
-          baseRate: 780,
-          markupType: 'flat',
-          markupValue: 0,
-          markupCalculatedAmount: 0,
-          finalRate: 780,
-          transitTime: '1 Day',
-          validUntil: '2026-12-31',
-          notes: 'THISAI contracted last-mile drayage service.',
-          isSelected: false,
-        },
-      ],
+      quotes: generateSchemaQuotesForStage(5, record, 'Last Mile Delivery'),
       documents: buildStageDocumentsFromSchema(5),
     });
   }
@@ -401,22 +170,7 @@ export const generateDynamicPostSubmissionStages = (
       category: 'special_service',
       locationInfo: 'Full Transit Coverage',
       iconType: 'shield',
-      quotes: [
-        {
-          id: 'q-ins-1',
-          type: 'third_party',
-          providerName: 'Allianz Cargo Marine Insurance (3rd Party)',
-          baseRate: 150,
-          markupType: 'flat',
-          markupValue: 25,
-          markupCalculatedAmount: 25,
-          finalRate: 175,
-          transitTime: 'Immediate',
-          validUntil: '2026-12-31',
-          notes: 'Comprehensive All-Risk (Clause A) marine cargo insurance policy.',
-          isSelected: true,
-        },
-      ],
+      quotes: generateSchemaQuotesForStage(6, record, 'Marine Insurance'),
       documents: insuranceDocs,
     });
   }

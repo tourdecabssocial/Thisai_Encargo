@@ -39,8 +39,8 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           className={`field-select ${icon ? 'has-icon' : ''}`}
           {...props}
         >
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value} className="select-option">
+          {options.map((opt, index) => (
+            <option key={`${opt.value}-${index}`} value={opt.value} className="select-option">
               {opt.label}
             </option>
           ))}
