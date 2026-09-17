@@ -5,6 +5,7 @@ import {
   type RouteStage,
   type StageDocument,
 } from '../../services/shipmentLifecycleEngine';
+import { resolveTradeLane, getHSChapterComplianceFromSchema } from '../../services/cargoDocService';
 import {
   MapPin,
   Truck,
@@ -28,6 +29,9 @@ interface ShipmentLifecycleRouteCardProps {
 
 export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProps> = ({ input }) => {
   const stages = generateShipmentRouteLifecycle(input);
+  const tradeLane = resolveTradeLane(input.originPortOrCity, input.destinationPortOrCity);
+  const hsCompliance = getHSChapterComplianceFromSchema(input.hsCode, tradeLane);
+
   const [expandedStageIds, setExpandedStageIds] = useState<string[]>([]);
   const [filterCategory, setFilterCategory] = useState<'All' | 'Origin' | 'Main Freight' | 'Destination'>('All');
 
@@ -75,10 +79,38 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
     <div className="lifecycle-card-container">
       {/* Dynamic AI Banner */}
       <div className="route-header-banner">
-        <div className="route-banner-top">
+        <div className="route-banner-top" style={{ flexWrap: 'wrap', gap: '0.4rem' }}>
           <span className="route-ai-badge">
             <Zap size={11} /> AI Engine • {input.serviceType}
           </span>
+          <span
+            style={{
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              padding: '0.15rem 0.5rem',
+              borderRadius: '6px',
+              background: tradeLane === 'IN_to_US' ? '#dbeafe' : '#fef3c7',
+              color: tradeLane === 'IN_to_US' ? '#1e40af' : '#92400e',
+              border: `1px solid ${tradeLane === 'IN_to_US' ? '#bfdbfe' : '#fde68a'}`,
+            }}
+          >
+            {tradeLane === 'IN_to_US' ? '🇮🇳 India ➔ 🇺🇸 US (Export)' : '🇺🇸 US ➔ 🇮🇳 India (Import)'}
+          </span>
+          {hsCompliance && (
+            <span
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                padding: '0.15rem 0.5rem',
+                borderRadius: '6px',
+                background: '#f3e8ff',
+                color: '#6b21a8',
+                border: '1px solid #e9d5ff',
+              }}
+            >
+              HS Ch. {hsCompliance.chapter} ({hsCompliance.scope})
+            </span>
+          )}
         </div>
 
         <h3 className="route-banner-title">Interactive Shipment Route & Stage Documentation Map</h3>

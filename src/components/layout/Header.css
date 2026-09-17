@@ -38,6 +38,14 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  color: #0f172a;
+}
+
+.brand-name .gradient-text {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 45%, #0ea5e9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .brand-tagline {

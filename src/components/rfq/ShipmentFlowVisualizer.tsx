@@ -14,6 +14,7 @@ import {
   Sun,
   Compass,
 } from 'lucide-react';
+import { resolveTradeLane, getHSChapterComplianceFromSchema } from '../../services/cargoDocService';
 import './ShipmentFlowVisualizer.css';
 
 interface ShipmentFlowVisualizerProps {
@@ -24,6 +25,9 @@ interface ShipmentFlowVisualizerProps {
   fromAddress?: string;
   toAddress?: string;
   currentStep?: number;
+  hsCode?: string;
+  isHazmat?: boolean;
+  isReefer?: boolean;
 }
 
 export interface RoutePoint {
@@ -43,6 +47,7 @@ export interface FlowConnector {
   stakeholder: string;
   estimatedTime: string;
   document: string;
+  documents?: string[];
   vehicleType: 'truck' | 'clearance' | 'main_linehaul';
 }
 
@@ -53,6 +58,9 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
   destName,
   fromAddress,
   toAddress,
+  hsCode,
+  isHazmat,
+  isReefer,
 }) => {
   const isAir = mode === 'Air';
   const scope = serviceScope || 'D2D';
@@ -121,6 +129,12 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
     },
   ];
 
+  const tradeLane = resolveTradeLane(displayFromAddr || displayOriginPort, displayToAddr || displayDestPort);
+  const hsCompliance = getHSChapterComplianceFromSchema(hsCode, tradeLane);
+
+  const hsExportDocs = hsCompliance?.exportAgencyDocs || [];
+  const hsImportDocs = hsCompliance?.importAgencyDocs || [];
+
   // 6 Intermediate Flow Connections (Flow Names between Points)
   const flows: FlowConnector[] = [
     {
@@ -131,7 +145,13 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
       description: `First-mile truck pickup from ${displayFromAddr} to origin consolidation hub.`,
       stakeholder: 'Drayage Trucker',
       estimatedTime: '2 - 4 Hours',
-      document: 'Dock Receipt & Dispatch Order',
+      document: isReefer ? 'Dock Receipt & Cold Chain Temp Setup' : 'Dock Receipt & Dispatch Order',
+      documents: [
+        'Dock Receipt & Dispatch Order',
+        'Booking Confirmation',
+        ...(isReefer ? ['Cold Chain Temperature Setting Instructions'] : []),
+        ...(isHazmat ? ['Dangerous Goods Multimodal Declaration'] : []),
+      ],
       vehicleType: 'truck',
     },
     {
@@ -142,7 +162,12 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
       description: `Cargo transfer, palletization, and drayage transport to ${displayOriginPort}.`,
       stakeholder: 'Hub Logistics Team',
       estimatedTime: '3 - 6 Hours',
-      document: 'Terminal Gate Pass',
+      document: isHazmat ? 'Terminal Gate Pass & IMO DG Gate Pass' : 'Terminal Gate Pass',
+      documents: [
+        'Terminal Gate Pass',
+        'Verified Gross Mass (VGM) Certificate',
+        ...(isHazmat ? ['IMO Hazmat Approval & Terminal DG Gate Pass'] : []),
+      ],
       vehicleType: 'truck',
     },
     {
@@ -153,7 +178,14 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
       description: `Automated AES export customs filing & gantry loading at ${displayOriginPort}.`,
       stakeholder: 'Export Customs Broker',
       estimatedTime: '4 - 12 Hours',
-      document: 'Export Clearance Release',
+      document: hsExportDocs.length > 0
+        ? `Export Clearance (${hsExportDocs.length} HS Ch. ${hsCompliance?.chapter} Docs)`
+        : 'Export Clearance Release',
+      documents: [
+        'Shipping Bill / AES Export Declaration',
+        'Export Clearance Release Certificate',
+        ...hsExportDocs,
+      ],
       vehicleType: 'clearance',
     },
     {
@@ -167,6 +199,9 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
       stakeholder: isAir ? 'Air Carrier' : 'Ocean Carrier',
       estimatedTime: isAir ? '12 - 36 Hours' : '10 - 25 Days',
       document: isAir ? 'Air Waybill (AWB)' : 'Master Bill of Lading (MBL)',
+      documents: isAir
+        ? ['Air Waybill (AWB)', 'Master Cargo Manifest', 'Commercial Invoice & Packing List']
+        : ['Master Bill of Lading (MBL)', 'Container Load Plan', 'Commercial Invoice & Packing List'],
       vehicleType: 'main_linehaul',
     },
     {
@@ -177,7 +212,14 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
       description: `Vessel unberthing/discharge at ${displayDestPort}, CBP import clearance & DO release.`,
       stakeholder: 'Import Customs Broker',
       estimatedTime: '6 - 24 Hours',
-      document: 'Import Customs Entry 7501',
+      document: hsImportDocs.length > 0
+        ? `Import Clearance (${hsImportDocs.length} HS Ch. ${hsCompliance?.chapter} Permits)`
+        : 'Import Customs Entry 7501',
+      documents: [
+        'Bill of Entry (Import Customs Entry 7501)',
+        'Delivery Order (DO) Release',
+        ...hsImportDocs,
+      ],
       vehicleType: 'clearance',
     },
     {
@@ -189,6 +231,7 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
       stakeholder: 'Last-Mile Delivery Trucker',
       estimatedTime: '3 - 8 Hours',
       document: 'Signed Proof of Delivery (POD)',
+      documents: ['Signed Proof of Delivery (POD)', 'Gate Pass Out', 'e-Way Bill / Transshipment Permit'],
       vehicleType: 'truck',
     },
   ];
@@ -390,16 +433,46 @@ export const ShipmentFlowVisualizer: React.FC<ShipmentFlowVisualizerProps> = ({
 
           <p className="detail-desc">{activeFlowData.description}</p>
 
-          <div className="detail-meta-row">
+          <div className="detail-meta-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
             <span className="meta-item">
               <UserCheck size={12} /> {activeFlowData.stakeholder}
             </span>
             <span className="meta-item">
               <Clock size={12} /> {activeFlowData.estimatedTime}
             </span>
-            <span className="meta-item doc">
-              <FileText size={12} /> {activeFlowData.document}
-            </span>
+
+            {activeFlowData.documents && activeFlowData.documents.length > 0 ? (
+              <div style={{ width: '100%', marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <FileText size={13} style={{ color: '#2563eb' }} /> Leg Compliance & Required Documents ({activeFlowData.documents.length}):
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {activeFlowData.documents.map((docName, dIdx) => (
+                    <span
+                      key={dIdx}
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        background: '#eff6ff',
+                        color: '#1e40af',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        border: '1px solid #bfdbfe',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                      }}
+                    >
+                      📄 {docName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <span className="meta-item doc">
+                <FileText size={12} /> {activeFlowData.document}
+              </span>
+            )}
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ import { Step2CargoPackages } from '../components/rfq/Step2CargoPackages';
 import { Step3ContainerLoadConfig } from '../components/rfq/Step3ContainerLoadConfig';
 import { RFQSummarySidebar } from '../components/rfq/RFQSummarySidebar';
 import { ShipmentLifecycleRouteCard } from '../components/rfq/ShipmentLifecycleRouteCard';
-import { RFQSubmissionReport } from '../components/rfq/RFQSubmissionReport';
+import { AssociatePostSubmissionPortal } from '../components/rfq/AssociatePostSubmissionPortal';
 import { Button } from '../components/ui/Button';
 import { parseShipmentDescriptionWithAI } from '../services/aiDescriptionParserService';
 import { ArrowLeft, ArrowRight, Send, Layers, Check, Sparkles, ClipboardList, FileText, RotateCcw } from 'lucide-react';
@@ -58,7 +58,7 @@ export const RFQFormFlow: React.FC = () => {
   };
 
   if (isSubmitted && submittedRecord) {
-    return <RFQSubmissionReport record={submittedRecord} onReset={resetForm} />;
+    return <AssociatePostSubmissionPortal record={submittedRecord} onReset={resetForm} />;
   }
 
   // Dynamic Selected Address & Port Labels Resolution for Flow Diagrams & Cards

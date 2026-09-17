@@ -1,0 +1,3986 @@
+{
+  "meta": {
+    "description": "Unified logistics documentation master schema combining Stage-based milestone workflows (split by trade lane: IN_to_US and US_to_IN, filtered across D2D, D2P, P2D, P2P service scopes) and HS Chapter-specific regulatory compliance requirements (HS 01-99)[cite: 5, 7].",
+    "last_updated": "2026-09-16",
+    "scopes": {
+      "D2D": "Door-to-Door (Origin Door -> Destination Door)",
+      "D2P": "Door-to-Port (Origin Door -> Destination Port)",
+      "P2D": "Port-to-Door (Origin Port -> Destination Door)",
+      "P2P": "Port-to-Port (Origin Port -> Destination Port)"
+    }
+  },
+  "special_services_documents": {
+    "insurance": [
+      {
+        "name": "Marine Insurance Policy Certificate",
+        "importance": "mandatory",
+        "category": "Freight",
+        "issuer": "Insurance Underwriter",
+        "recipient": "Shipper / Bank",
+        "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+        "status": "Verified",
+        "description": "Official insurance certificate listing cargo declared value & policy terms."
+      },
+      {
+        "name": "Cargo Valuation & Commercial Invoice Statement",
+        "importance": "mandatory",
+        "category": "Origin",
+        "issuer": "Exporter",
+        "recipient": "Insurance Underwriter",
+        "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+        "status": "Verified",
+        "description": "Declared commercial invoice value statement for insurance claims coverage."
+      }
+    ],
+    "fumigation": [
+      {
+        "name": "ISPM-15 Fumigation Certificate",
+        "importance": "mandatory",
+        "category": "Origin",
+        "issuer": "Plant Quarantine Agency",
+        "recipient": "Customs",
+        "applicableScopes": ["D2D", "D2P"],
+        "status": "Pending",
+        "description": "Official plant quarantine ISPM-15 stamp compliance certificate."
+      }
+    ],
+    "hazmat": [
+      {
+        "name": "Dangerous Goods Declaration (DGD / IMO)",
+        "importance": "mandatory",
+        "category": "Freight",
+        "issuer": "Certified Hazmat Shipper",
+        "recipient": "Carrier / Terminal",
+        "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+        "status": "Pending",
+        "description": "Official IMO dangerous goods manifest and shipper declaration."
+      },
+      {
+        "name": "Material Safety Data Sheet (MSDS)",
+        "importance": "mandatory",
+        "category": "Origin",
+        "issuer": "Manufacturer",
+        "recipient": "Carrier / Customs",
+        "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+        "status": "Pending",
+        "description": "16-section safety data sheet for chemical / battery transport."
+      }
+    ],
+    "reefer": [
+      {
+        "name": "Reefer Temperature Log Report",
+        "importance": "mandatory",
+        "category": "Freight",
+        "issuer": "Carrier / Terminal",
+        "recipient": "Consignee",
+        "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+        "status": "Pending",
+        "description": "Automated IoT temperature recorder log file throughout transit."
+      },
+      {
+        "name": "Cold Chain Pre-Trip Inspection (PTI)",
+        "importance": "mandatory",
+        "category": "Origin",
+        "issuer": "Reefer Technician",
+        "recipient": "Terminal",
+        "applicableScopes": ["D2D", "P2D"],
+        "status": "Pending",
+        "description": "Pre-trip cooling check certificate for reefer container."
+      }
+    ]
+  },
+  "stage_milestone_documents": {
+    "IN_to_US": [
+      {
+        "stage_id": 1,
+        "stage_name": "Factory / Pre-Shipment & First-Mile Pickup",
+        "visible_scopes": ["D2D", "D2P"],
+        "sub_stages": [
+          "1. Factory / Pre-Shipment",
+          "3. Factory to CFS/ICD"
+        ],
+        "documents": [
+          {
+            "name": "Commercial Invoice",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "India Exporter",
+            "recipient": "CHA, Buyer, Bank",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Official invoice with cargo description, quantity, unit value, HS codes; issued to CHA, Buyer, and Bank."
+          },
+          {
+            "name": "Packing List",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "India Exporter",
+            "recipient": "CHA, Forwarder, CFS",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Itemized list of packages, piece count, net/gross weight, and dimensions; forwarded to CHA, Forwarder, and CFS."
+          },
+          {
+            "name": "Delivery Challan / E-way Bill",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "Exporter / Transporter",
+            "recipient": "CFS (gate entry)",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Domestic transport document authorizing movement of goods from factory to CFS/ICD gate entry."
+          }
+          
+        ]
+      },
+      {
+        "stage_id": 2,
+        "stage_name": "Booking, CHA / Customs Filing & Origin Terminal",
+        "visible_scopes": ["D2D", "D2P", "P2D", "P2P"],
+        "sub_stages": [
+          "2. Booking Confirmed",
+          "4. CHA / Customs Filing (India)",
+          "5. Customs Examination (India)",
+          "6. Customs Clearance (India)",
+          "7. CFS to Terminal",
+          "8. Terminal - Loading",
+          "9. Vessel Departure / B/L"
+        ],
+        "documents": [
+          {
+            "name": "Booking Confirmation",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Forwarder",
+            "recipient": "Exporter / CHA",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Confirmed vessel/flight space allocation with booking reference and cut-off dates."
+          },
+          {
+            "name": "Shipping Instructions (SI)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Exporter / Forwarder",
+            "recipient": "Shipping Line",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Instructions to Shipping Line specifying B/L consignee, notify party, cargo marks, and description."
+          },
+          {
+            "name": "Shipping Bill",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "CHA",
+            "recipient": "Indian Customs",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Official export declaration filed with Indian Customs via ICEGATE to obtain statutory export clearance."
+          },
+          {
+            "name": "Certificate of Origin",
+            "importance": "conditional",
+            "category": "Origin",
+            "issuer": "Chamber of Commerce / EPC",
+            "recipient": "Buyer (US)",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Certifies country of manufacture; issued to US Buyer for preferential duty claims and import compliance."
+          },
+          {
+            "name": "VGM Declaration",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Exporter / CHA",
+            "recipient": "Shipping Line / Terminal",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "SOLAS-mandatory declared container gross weight submitted to Shipping Line / Terminal before loading."
+          },
+          {
+            "name": "COA (as applicable)",
+            "importance": "conditional",
+            "category": "Origin",
+            "issuer": "Respective Agency",
+            "recipient": "Customs (attached)",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Certificate of Analysis for quality-controlled goods attached to Indian Customs filing."
+          },
+          {
+            "name": "Examination Report",
+            "importance": "conditional",
+            "category": "Origin",
+            "issuer": "Customs Officer",
+            "recipient": "Filed with Shipping Bill",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Official customs physical/scanning examination report confirming cargo matches Shipping Bill declaration."
+          },
+          {
+            "name": "LEO (Let Export Order)",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "Indian Customs",
+            "recipient": "CHA → Terminal",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Final permission from Indian Customs allowing cargo to be loaded onto vessel."
+          },
+          {
+            "name": "Gate Pass / EIR",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "CFS / Terminal",
+            "recipient": "Transporter",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Terminal gate entry/exit authorization and container condition receipt."
+          },
+          {
+            "name": "Mate's Receipt",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Ship's Officer / Terminal",
+            "recipient": "Shipping Line",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Acknowledgment from the ship's mate that cargo was loaded on board in apparent good order."
+          },
+          {
+            "name": "Draft Bill of Lading",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Forwarder",
+            "recipient": "Exporter (for verification)",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Draft B/L forwarded to Exporter for review and approval before final release."
+          },
+          {
+            "name": "Final B/L (Original / Telex)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / NVOCC",
+            "recipient": "Exporter → Buyer / Bank",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Final issued Bill of Lading (3 originals or telex release); primary title document."
+          }
+        ]
+      },
+      {
+        "stage_id": 3,
+        "stage_name": "Main Freight International Transit",
+        "visible_scopes": ["D2D", "D2P", "P2D", "P2P"],
+        "sub_stages": [
+          "10. Post-Departure Dispatch",
+          "11. Pre-Arrival (US)",
+          "12. Document Collection (US)"
+        ],
+        "documents": [
+          
+          {
+            "name": "ISF / 10+2 (Importer Security Filing)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "US Importer / Customs Broker",
+            "recipient": "US CBP (filed 24 hrs BEFORE vessel loads at Indian port)",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "US CBP mandatory security filing submitted electronically at least 24 hours prior to container lading."
+          },
+          {
+            "name": "Carrier's Manifest",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line",
+            "recipient": "US CBP",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Complete manifest of all cargo on board transmitted by Shipping Line to US CBP."
+          },
+          {
+            "name": "Arrival Notice",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Agent",
+            "recipient": "US Consignee",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Notification sent to US Consignee detailing freight charges, free time, and demurrage schedules."
+          },
+          {
+            "name": "Original B/L Surrender / Telex Release",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "US Importer",
+            "recipient": "Shipping Line (issues Delivery Order in return)",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "US Importer surrenders original B/L (or telex release confirmation) to carrier in exchange for D.O."
+          },
+          {
+            "name": "Delivery Order (D.O.)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Agent",
+            "recipient": "US Importer / Customs Broker",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Commercial release document authorizing marine terminal to release container for pickup."
+          }
+        ]
+      },
+      {
+        "stage_id": 4,
+        "stage_name": "Destination Port & Import Customs Clearance (US)",
+        "visible_scopes": ["D2D", "P2D"],
+        "sub_stages": [
+          "13. Customs Filing (US Broker)",
+          "14. Duty Assessment (US)",
+          "15. Customs Examination (US)",
+          "16. Final Clearance (US)",
+          "17. Terminal Handling (US)"
+        ],
+        "documents": [
+          {
+            "name": "CBP Entry (Form 3461 & 7501)",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Customs Broker",
+            "recipient": "US CBP",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "US CBP import entry — Form 3461 (Entry/Immediate Delivery) and Form 7501 (Entry Summary) — filed via ACE."
+          },
+          {
+            "name": "Certificate of Origin (for trade preference)",
+            "importance": "conditional",
+            "category": "Destination",
+            "issuer": "Exporter (sent earlier)",
+            "recipient": "US CBP",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Presented to US CBP to claim preferential tariff duty rates under trade agreements."
+          },
+          {
+            "name": "Import Permit (FDA / USDA / EPA)",
+            "importance": "conditional",
+            "category": "Destination",
+            "issuer": "Respective US Agency",
+            "recipient": "US CBP",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Partner Government Agency (PGA) clearance for controlled goods (food, pharma, plants, chemicals)."
+          },
+          {
+            "name": "Customs Bond",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Surety Company / Broker",
+            "recipient": "US CBP",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Continuous or single-entry bond guaranteeing duties, taxes, and penalties owed to US CBP."
+          },
+          {
+            "name": "HTS Classification & Duty Calculation",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Customs Broker",
+            "recipient": "US CBP",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Correct HTS code determination and duty rate calculation submitted to US CBP."
+          },
+          {
+            "name": "Duty / Tax Payment",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "US Importer / Broker",
+            "recipient": "US CBP",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Settlement of assessed import duties, Harbor Maintenance Fee (HMF), and Merchandise Processing Fee (MPF)."
+          },
+          {
+            "name": "CBP Exam Report (X-ray / VACIS / Physical)",
+            "importance": "conditional",
+            "category": "Destination",
+            "issuer": "CBP Officer",
+            "recipient": "Filed with entry record",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Official US CBP inspection report (VACIS scan or physical tailgate examination)."
+          },
+          {
+            "name": "Entry Release ('Cargo Released')",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "US CBP",
+            "recipient": "Terminal",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "US CBP 1C electronic cargo release notification confirming customs clearance."
+          },
+          {
+            "name": "Terminal Release / Pickup Number",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Terminal Operator",
+            "recipient": "Trucker",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Terminal-issued pickup authorization allowing motor carrier to collect container."
+          },
+          {
+            "name": "Container Interchange Report",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Terminal",
+            "recipient": "Trucker / Importer",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Documents container physical condition at out-gate pickup to protect against liability."
+          }
+        ]
+      },
+      {
+        "stage_id": 5,
+        "stage_name": "Last-Mile Delivery & Consignee Door Handover (US)",
+        "visible_scopes": ["D2D", "P2D"],
+        "sub_stages": ["18. Last-Mile Delivery (US)"],
+        "documents": [
+          {
+            "name": "Delivery Receipt / Inland B/L",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Trucker",
+            "recipient": "US Importer",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Inland transport document covering last-mile movement from US port/terminal to consignee door."
+          },
+          {
+            "name": "Proof of Delivery (POD)",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "US Importer (signed)",
+            "recipient": "Broker / Forwarder (closes file)",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Delivery receipt countersigned by US Importer acknowledging goods received in good condition."
+          },
+          {
+            "name": "Empty Container Return Receipt",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Trucker / Terminal",
+            "recipient": "Shipping Line",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Receipt issued by container depot confirming empty container returned in accepted condition."
+          }
+        ]
+      }
+    ],
+    "US_to_IN": [
+      {
+        "stage_id": 1,
+        "stage_name": "Factory / Pre-Shipment & First-Mile Pickup (US)",
+        "visible_scopes": ["D2D", "D2P"],
+        "sub_stages": [
+          "1. Factory / Pre-Shipment",
+          "3. Factory to CFS/Port"
+        ],
+        "documents": [
+          {
+            "name": "Commercial Invoice",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "US Exporter",
+            "recipient": "Customs Broker, Buyer (India), Bank",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Official commercial invoice detailing goods, value, HTS code, and terms of sale."
+          },
+          {
+            "name": "Packing List",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "US Exporter",
+            "recipient": "Customs Broker, Forwarder, CFS",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Detailed packing breakdown showing package count, gross/net weight, and dimensions."
+          },
+          {
+            "name": "Delivery Order / Transport Note",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "Exporter / Forwarder",
+            "recipient": "Trucker, CFS",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Inland bill of lading / transport document authorizing pickup and transfer to US terminal."
+          }
+          
+        ]
+      },
+      {
+        "stage_id": 2,
+        "stage_name": "Booking, Customs Broker Filing & US Origin Port",
+        "visible_scopes": ["D2D", "D2P", "P2D", "P2P"],
+        "sub_stages": [
+          "2. Booking Confirmed",
+          "4. Customs Broker Filing (US)",
+          "5. Customs Examination (US)",
+          "6. Customs Clearance (US)",
+          "7. Port - Loading",
+          "8. Vessel Departure / B/L"
+        ],
+        "documents": [
+          {
+            "name": "Booking Confirmation",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Forwarder",
+            "recipient": "Exporter / Customs Broker",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Confirmed booking space reservation with carrier for vessel/flight departure."
+          },
+          {
+            "name": "Shipping Instructions (SI)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Exporter / Forwarder",
+            "recipient": "Shipping Line",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Instructions to ocean carrier declaring shipper, consignee, notify party, and cargo details."
+          },
+          {
+            "name": "AES Filing / ITN / EEI",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "Customs Broker / Exporter",
+            "recipient": "US CBP (before vessel departs US port)",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Electronic Export Information (EEI) filed via AES obtaining an Internal Transaction Number (ITN)."
+          },
+          {
+            "name": "Export License (if ECCN / dual-use)",
+            "importance": "conditional",
+            "category": "Origin",
+            "issuer": "US Dept of Commerce (BIS)",
+            "recipient": "Customs Broker / CBP",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Validated BIS / DDTC license for controlled dual-use or munitions list commodities."
+          },
+          {
+            "name": "Certificate of Origin",
+            "importance": "conditional",
+            "category": "Origin",
+            "issuer": "Chamber of Commerce (US)",
+            "recipient": "Buyer (India)",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Certifies manufacture in the US; dispatched to India Importer for customs processing."
+          },
+          {
+            "name": "VGM Declaration",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Exporter / Broker",
+            "recipient": "Shipping Line / Terminal",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "SOLAS Verified Gross Mass declaration certified and submitted before terminal loading."
+          },
+          {
+            "name": "CBP Examination Report",
+            "importance": "conditional",
+            "category": "Origin",
+            "issuer": "US CBP Officer",
+            "recipient": "Filed with export record",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Report generated in the event of an outbound customs outbound outbound hold or inspection."
+          },
+          {
+            "name": "Export Clearance (AES / ITN Validation)",
+            "importance": "mandatory",
+            "category": "Origin",
+            "issuer": "US CBP",
+            "recipient": "Terminal (cargo cleared to load)",
+            "applicableScopes": ["D2D", "D2P"],
+            "status": "Pending",
+            "description": "Customs validation granting terminal permission to lade container on board vessel."
+          },
+          {
+            "name": "Mate's Receipt",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Ship's Officer / Terminal",
+            "recipient": "Shipping Line",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Acknowledgment that goods were loaded on board in apparent good condition."
+          },
+          {
+            "name": "Draft Bill of Lading",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Forwarder",
+            "recipient": "Exporter (for verification)",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Draft B/L circulated for shipper review and verification before final issuance."
+          },
+          {
+            "name": "Final B/L (Original / Telex)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / NVOCC",
+            "recipient": "Exporter → Buyer / Bank (India)",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Final ocean bill of lading establishing title; forwarded to India consignee/bank."
+          }
+        ]
+      },
+      {
+        "stage_id": 3,
+        "stage_name": "Main Freight International Transit (US to India)",
+        "visible_scopes": ["D2D", "D2P", "P2D", "P2P"],
+        "sub_stages": [
+          "9. Post-Departure Dispatch",
+          "10. Pre-Arrival (India)",
+          "11. Document Collection (India)"
+        ],
+        "documents": [
+         
+          {
+            "name": "IGM (Import General Manifest)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Carrier",
+            "recipient": "Indian Customs",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Statutory manifest filed by carrier with Indian Customs prior to vessel arrival."
+          },
+          {
+            "name": "Arrival Notice",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Agent",
+            "recipient": "India Consignee",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Notice sent to Indian consignee detailing vessel arrival, container destination CFS, and charges."
+          },
+          {
+            "name": "Original B/L Surrender / Telex Release",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "India Importer",
+            "recipient": "Shipping Line (issues Delivery Order in return)",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Surrender of original B/L or telex release confirmation to line to obtain Delivery Order."
+          },
+          {
+            "name": "Delivery Order (D.O.)",
+            "importance": "mandatory",
+            "category": "Freight",
+            "issuer": "Shipping Line / Agent",
+            "recipient": "India Importer / CHA",
+            "applicableScopes": ["D2D", "D2P", "P2D", "P2P"],
+            "status": "Pending",
+            "description": "Carrier authorization issued to CHA allowing customs clearance and cargo movement from port."
+          }
+        ]
+      },
+      {
+        "stage_id": 4,
+        "stage_name": "Indian Port & Import Customs Clearance (India)",
+        "visible_scopes": ["D2D", "P2D"],
+        "sub_stages": [
+          "12. Customs Filing (India CHA)",
+          "13. Duty Assessment (India)",
+          "14. Customs Examination (India)",
+          "15. Final Clearance (India)",
+          "16. Terminal / CFS Handling (India)"
+        ],
+        "documents": [
+          {
+            "name": "Bill of Entry",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "CHA",
+            "recipient": "Indian Customs",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Legal import declaration filed on ICEGATE for home consumption or warehousing."
+          },
+          {
+            "name": "Certificate of Origin (for FTA benefit)",
+            "importance": "conditional",
+            "category": "Destination",
+            "issuer": "Exporter (sent earlier)",
+            "recipient": "Indian Customs",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Certificate presented to claim concessional customs duty under applicable trade treaties."
+          },
+          {
+            "name": "Import License / BIS / FSSAI / Phytosanitary (as applicable)",
+            "importance": "conditional",
+            "category": "Destination",
+            "issuer": "DGFT / Respective Body",
+            "recipient": "Indian Customs",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Statutory regulatory permits (FSSAI NOC, BIS ISI certificate, Plant Quarantine Permit)."
+          },
+          {
+            "name": "Duty Calculation / Assessment",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Customs Officer",
+            "recipient": "CHA / Importer",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Customs assessment of basic customs duty, IGST, and social welfare surcharge."
+          },
+          {
+            "name": "Duty Payment Challan",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Importer / CHA",
+            "recipient": "Indian Customs",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Electronic challan acknowledging payment of customs duties via ICEGATE."
+          },
+          {
+            "name": "Examination Report",
+            "importance": "conditional",
+            "category": "Destination",
+            "issuer": "Customs Officer",
+            "recipient": "Filed with Bill of Entry",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Customs dock inspection/appraisal report verifying container seals and content."
+          },
+          {
+            "name": "Out of Charge (OOC) Order",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Indian Customs",
+            "recipient": "CHA → Terminal",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Final customs clearance order authorizing cargo delivery from customs custody."
+          },
+          {
+            "name": "Terminal Gate Pass / Release Note",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Terminal / CFS",
+            "recipient": "Transporter",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "CFS gate pass issued to trucker allowing container out-gate movement."
+          }
+        ]
+      },
+      {
+        "stage_id": 5,
+        "stage_name": "Last-Mile Delivery & Consignee Door Handover (India)",
+        "visible_scopes": ["D2D", "P2D"],
+        "sub_stages": ["17. Last-Mile Delivery (India)"],
+        "documents": [
+          {
+            "name": "Delivery Challan",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Transporter",
+            "recipient": "India Importer",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Transport dispatch document accompanying vehicle during final delivery."
+          },
+          {
+            "name": "Proof of Delivery (POD)",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "India Importer (signed)",
+            "recipient": "CHA / Forwarder (closes file)",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Receipt signed and stamped by importer confirming physical delivery of goods."
+          },
+          {
+            "name": "Empty Container Return Receipt",
+            "importance": "mandatory",
+            "category": "Destination",
+            "issuer": "Transporter / CFS",
+            "recipient": "Shipping Line",
+            "applicableScopes": ["D2D", "P2D"],
+            "status": "Pending",
+            "description": "Equipment receipt issued upon returning de-stuffed empty container to the shipping line depot."
+          }
+        ]
+      }
+    ]
+  },
+  "chapters": [
+    {
+      "chapter": "01",
+      "hs_range": "01-05",
+      "scope": "Live Animals",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Veterinary Health Certificate",
+          "IATA LAR (Live Animals Regulations) Checklist",
+          "CITES Certificate (if wild-sourced species)",
+          "Animal Welfare Manifest",
+          "USFWS Form 3-177 (Declaration for Import/Export of Fish or Wildlife)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "AQCS Veterinary Health Certificate",
+          "APEDA Registration (livestock export)",
+          "IATA LAR Checklist",
+          "CITES Certificate (if wild-sourced species)",
+          "Animal Welfare Manifest",
+          "Advance Animal Quarantine NOC / AQCS Clearance Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "CBP Entry Documents",
+          "CITES Certificate (if wild-sourced species)",
+          "IATA LAR Checklist",
+          "USFWS Form 3-177",
+          "Original Foreign Official Veterinary Health Certificate",
+          "CDC Import Permit (if vector/reservoir species)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "AQCS Import Permit / Quarantine Clearance",
+          "CITES Certificate (if wild-sourced species)",
+          "IATA LAR Checklist",
+          "Original Foreign Veterinary Health Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "02",
+      "hs_range": "01-05",
+      "scope": "Meat & Edible Offal",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "USDA FSIS Export Certificate (Form 9060-5)",
+          "Veterinary Sanitary Certificate",
+          "Approved Abattoir/Establishment Listing",
+          "Halal Certificate (destination-dependent)",
+          "Cold-Chain / Temperature Logs"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Registration",
+          "Veterinary Sanitary Certificate",
+          "Approved Abattoir/Establishment Listing",
+          "Halal Certificate (destination-dependent)",
+          "Cold-Chain / Temperature Logs",
+          "Export Inspection Council (EIC/EIA) Pre-Shipment Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice",
+          "USDA FSIS Import Inspection",
+          "CBP Entry Documents",
+          "Approved Abattoir/Establishment Listing (source verification)",
+          "Foreign Government Meat Inspection Certificate (FSIS-equivalent Form 9540-1)",
+          "Cold-Chain Log Review"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "AQCS Import Permit / Quarantine Clearance",
+          "Approved Abattoir/Establishment Listing (source verification)",
+          "Original Foreign Veterinary Sanitary Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "03",
+      "hs_range": "01-05",
+      "scope": "Fish & Crustaceans",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Catch Certificate (IUU compliance)",
+          "Marine Health Certificate",
+          "CITES Certificate (sturgeon/caviar species)",
+          "Cold-Chain / Temperature Logs",
+          "USFWS Form 3-177 (mandatory for wild-harvested aquatic species)",
+          "NOAA Fisheries Catch/Export Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "MPEDA / EIA Certificate",
+          "Q Certificate (obtained at booking)",
+          "Catch Certificate (IUU compliance)",
+          "Marine Health Certificate",
+          "CITES Certificate (sturgeon/caviar species)",
+          "Lab Test Report",
+          "EIA Health Certificate",
+          "Marine Traceability/Catch Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice",
+          "NOAA/NMFS Import Documentation (seafood traceability)",
+          "CBP Entry Documents",
+          "Catch Certificate (IUU compliance)",
+          "USFWS Form 3-177",
+          "NOAA Seafood Import Monitoring Program (SIMP) Documentation (priority species)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "AQCS Quarantine Clearance",
+          "Catch Certificate (IUU compliance)",
+          "Original Foreign Sanitary Certificate",
+          "Sanitary Import Permit (SIP) issued by DAHD"
+        ]
+      }
+    },
+    {
+      "chapter": "04",
+      "hs_range": "01-05",
+      "scope": "Dairy, Eggs, Honey & Other Edible Animal Products",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Food Safety / Sanitary Certificate",
+          "Heat-Treatment / Pasteurization Proof",
+          "Residue Analysis Report",
+          "USDA Agricultural Marketing Service (AMS) Sanitary Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Registration",
+          "Food Safety / Sanitary Certificate",
+          "Heat-Treatment / Pasteurization Proof",
+          "Residue Analysis Report",
+          "Lab Test Report",
+          "Export Health/Sanitary Certificate from EIA/APEDA",
+          "Honey/Milk Residue Monitoring Report"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice",
+          "USDA Import Permit (dairy)",
+          "CBP Entry Documents",
+          "Pasteurization Proof (source verification)",
+          "Original Foreign Dairy/Egg Sanitary Certificate"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "Pasteurization Proof (source verification)",
+          "Sanitary Import Permit (SIP) from DAHD",
+          "Original Exporting Nation Veterinary Health Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "05",
+      "hs_range": "01-05",
+      "scope": "Other Animal-Origin Products (Bones, Glands, Hides, Semen, etc.)",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Veterinary Technical Processing Certificate",
+          "Non-Infectious Declaration",
+          "CITES Certificate (if from protected species)",
+          "USFWS Form 3-177 (hides, antlers, bones, trophies)",
+          "USDA APHIS VS Form 16-4 (Animal Products Export Certificate)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "AQCS Veterinary Technical Processing Certificate",
+          "Non-Infectious Declaration",
+          "CITES Certificate (if from protected species)",
+          "Veterinary Disinfection/Cleansing Certificate",
+          "WCCB (Wildlife Crime Control Bureau) NOC"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "CBP Entry Documents",
+          "Non-Infectious Declaration (source verification)",
+          "CITES Certificate (if from protected species)",
+          "USFWS Form 3-177",
+          "CDC Import Permit (if etiologic agent/infectious vector risk)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "AQCS Import Permit / Quarantine Clearance",
+          "Non-Infectious Declaration (source verification)",
+          "CITES Certificate (if from protected species)",
+          "Sanitary Import Permit (SIP) from DAHD",
+          "Manufacturer Sterilization/Degreasing Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "06",
+      "hs_range": "06-14",
+      "scope": "Live Trees & Plants, Bulbs, Roots, Cut Flowers",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "Fumigation Certificate (if required)",
+          "Foreign Destination Import Permit (pre-verified before dispatch)",
+          "CITES Export Certificate (for wild orchids/cacti)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate (Plant Quarantine)",
+          "APEDA Certificate",
+          "Fumigation Certificate (if required)",
+          "Foreign Destination Import Permit (pre-verified before dispatch)",
+          "CITES Export Certificate (for wild orchids/cacti)"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "Phytosanitary Inspection at Port of Entry",
+          "Original Foreign Phytosanitary Certificate",
+          "USDA Lacey Act Declaration (PPQ Form 505)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Original Foreign Phytosanitary Certificate",
+          "Plant Quarantine Import Permit (PQ02 under PQ Order 2003)"
+        ]
+      }
+    },
+    {
+      "chapter": "07",
+      "hs_range": "06-14",
+      "scope": "Edible Vegetables & Certain Roots/Tubers",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "FDA Registration",
+          "Fumigation Certificate (if required)",
+          "Certificate of Analysis (pesticide/MRL screen)",
+          "Temperature / Cold-Chain Datalogger Records"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "APEDA Certificate",
+          "FSSAI License",
+          "Lab Test Report (pesticide residue)",
+          "Fumigation Certificate (if required)",
+          "Temperature / Cold-Chain Datalogger Records"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "FDA Prior Notice",
+          "Phytosanitary Inspection at Port of Entry",
+          "Original Foreign Phytosanitary Certificate",
+          "USDA Section 8e Import Quality Inspection Certificate"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Plant Quarantine Import Permit (PQ02)",
+          "FSSAI NOC",
+          "Original Foreign Phytosanitary Certificate",
+          "Mandatory Treatment Endorsement (Fumigation / Cold Treatment)"
+        ]
+      }
+    },
+    {
+      "chapter": "08",
+      "hs_range": "06-14",
+      "scope": "Edible Fruit & Nuts; Citrus/Melon Peel",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "FDA Registration",
+          "Fumigation Certificate (if required)",
+          "Cold-Chain / Temperature Logs",
+          "Certificate of Analysis (pesticide/MRL screen)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "APEDA Certificate",
+          "FSSAI License",
+          "Lab Test Report (pesticide residue)",
+          "Fumigation Certificate (if required)",
+          "Temperature / Cold-Chain Datalogger Records"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "FDA Prior Notice",
+          "Phytosanitary Inspection at Port of Entry",
+          "Original Foreign Phytosanitary Certificate",
+          "USDA Section 8e Import Quality Inspection Certificate"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Plant Quarantine Import Permit (PQ02)",
+          "FSSAI NOC",
+          "Original Foreign Phytosanitary Certificate",
+          "Mandatory Treatment Endorsement (Fumigation / Cold Treatment)"
+        ]
+      }
+    },
+    {
+      "chapter": "09",
+      "hs_range": "06-14",
+      "scope": "Coffee, Tea, Mate & Spices",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "FDA Registration",
+          "Fumigation Certificate (if required)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "APEDA Certificate",
+          "FSSAI License",
+          "Spices Board / Tea Board Registration cum Allocation Certificate",
+          "Lab Test Report for Aflatoxin / Sudan Dye",
+          "Fumigation Certificate (if required)"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "Phytosanitary Inspection at Port of Entry",
+          "Original Foreign Phytosanitary Certificate (raw/whole spices)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Plant Quarantine Import Permit (PQ02)",
+          "Original Foreign Phytosanitary Certificate",
+          "FSSAI Health NOC / Analysis Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "10",
+      "hs_range": "06-14",
+      "scope": "Cereals",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "FDA Registration",
+          "Fumigation Certificate",
+          "Grain Quality/Weight Certificate",
+          "Non-GMO Origin Certificate / Laboratory Test Report"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "APEDA Certificate",
+          "FSSAI License",
+          "Fumigation Certificate",
+          "Grain Quality/Weight Certificate",
+          "Non-GMO Origin Certificate / Laboratory Test Report"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "Phytosanitary Inspection at Port of Entry",
+          "Original Foreign Phytosanitary Certificate"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Plant Quarantine Import Permit (PQ02)",
+          "FSSAI NOC",
+          "Original Foreign Phytosanitary Certificate",
+          "Mandatory Non-GMO Origin Certificate (for maize, rice, soybean)"
+        ]
+      }
+    },
+    {
+      "chapter": "11",
+      "hs_range": "06-14",
+      "scope": "Milling Products, Malt, Starches, Gluten",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "USDA APHIS Phytosanitary Certificate (grain-derived)",
+          "Non-GMO Origin Certificate / Laboratory Test Report"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "Lab Test Report",
+          "Phytosanitary Certificate",
+          "Non-GMO Origin Certificate / Laboratory Test Report"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "USDA APHIS Import Permit (if applicable)",
+          "Original Foreign Phytosanitary Certificate"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "Original Foreign Phytosanitary Certificate",
+          "Mandatory Non-GMO Origin Certificate (for maize, rice, soybean)"
+        ]
+      }
+    },
+    {
+      "chapter": "12",
+      "hs_range": "06-14",
+      "scope": "Oil Seeds, Oleaginous Fruits, Misc. Grains, Seeds & Industrial Plants",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "FDA Registration (if edible)",
+          "Fumigation Certificate",
+          "Seed Purity & Germination Certificate (for planting/propagation seeds)",
+          "Weed Seed-Free Declaration"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "APEDA Certificate",
+          "FSSAI License (if edible)",
+          "Lab Test Report",
+          "Fumigation Certificate",
+          "Seed Purity & Germination Certificate (for planting/propagation seeds)",
+          "Weed Seed-Free Declaration"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "FDA Prior Notice (if edible)",
+          "Phytosanitary Inspection at Port of Entry",
+          "Original Foreign Phytosanitary Certificate",
+          "GE (Genetically Engineered) Organism Declaration/Permit"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Plant Quarantine Import Permit (PQ02)",
+          "FSSAI NOC (if edible)",
+          "Original Foreign Phytosanitary Certificate",
+          "GE (Genetically Engineered) Organism Declaration/Permit"
+        ]
+      }
+    },
+    {
+      "chapter": "13",
+      "hs_range": "06-14",
+      "scope": "Lac, Gums, Resins & Vegetable Saps/Extracts",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "MSDS (if industrial use)",
+          "TSCA Compliance Certification (industrial resins)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "APEDA Certificate",
+          "MSDS (if industrial use)"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "EPA Clearance (if industrial chemical use)",
+          "TSCA Compliance Certification (industrial resins)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Plant Quarantine Import Permit (PQ02)",
+          "Original Foreign Phytosanitary Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "14",
+      "hs_range": "06-14",
+      "scope": "Vegetable Plaiting Materials & Other Vegetable Products",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "Fumigation Certificate",
+          "USDA Lacey Act Declaration (PPQ 505)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "Fumigation Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "USDA APHIS Import Permit",
+          "Phytosanitary Inspection at Port of Entry",
+          "USDA Lacey Act Declaration (PPQ 505)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Plant Quarantine Import Permit (PQ02)",
+          "Original Foreign Phytosanitary Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "15",
+      "hs_range": "15",
+      "scope": "Animal & Vegetable Fats, Oils and Waxes",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Health Certificate",
+          "MSDS (industrial-use fats/oils)",
+          "Free Fatty Acid (FFA) & Peroxide Value Analysis Report",
+          "Trans-fat Free / Non-Animal Origin Declaration"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "Lab Test Report (quality/adulteration)",
+          "Health Certificate",
+          "Free Fatty Acid (FFA) & Peroxide Value Analysis Report",
+          "Trans-fat Free / Non-Animal Origin Declaration"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice",
+          "USDA Import Permit (if animal-derived fat)",
+          "Foreign Official Meat/Animal Health Inspection Certificate (if containing animal tallow/lard)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "Legal Metrology (LMPC) Certificate (for pre-packaged retail oils)",
+          "AQCS Clearance (if animal fats)"
+        ]
+      }
+    },
+    {
+      "chapter": "16",
+      "hs_range": "16-24",
+      "scope": "Preparations of Meat, Fish or Crustaceans",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "USDA FSIS Export Certificate",
+          "Health Certificate",
+          "Cold-Chain / Temperature Logs",
+          "FSIS Form 9060-5 (processed meats)",
+          "NOAA Export Inspection Certificate (canned seafood)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "MPEDA / EIA Certificate (fish-based)",
+          "Q Certificate (seafood-based, at booking)",
+          "Health Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice",
+          "USDA FSIS Import Inspection",
+          "CBP Entry Documents",
+          "Foreign Government Meat Inspection Certificate (FSIS 9540-1 equivalent)",
+          "NOAA SIMP Reporting"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "Sanitary Import Permit (SIP - DAHD)",
+          "Original Foreign Sanitary/Veterinary Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "17",
+      "hs_range": "16-24",
+      "scope": "Sugars & Sugar Confectionery",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Health Certificate",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "Lab Test Report",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "USDA Import Quota Documentation (if applicable)",
+          "Foreign Food Facility Bioterrorism Registration Confirmation"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "FSSAI Food Importer License",
+          "Shelf-Life Declaration (certifying minimum 60% remaining shelf life)"
+        ]
+      }
+    },
+    {
+      "chapter": "18",
+      "hs_range": "16-24",
+      "scope": "Cocoa & Cocoa Preparations",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Health Certificate",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "Lab Test Report",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "Foreign Food Facility Bioterrorism Registration Confirmation"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "FSSAI Food Importer License",
+          "Shelf-Life Declaration (certifying minimum 60% remaining shelf life)"
+        ]
+      }
+    },
+    {
+      "chapter": "19",
+      "hs_range": "16-24",
+      "scope": "Preparations of Cereals, Flour, Starch or Milk; Bakers' Wares",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Health Certificate",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "Lab Test Report",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "Foreign Food Facility Bioterrorism Registration Confirmation"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "FSSAI Food Importer License",
+          "Shelf-Life Declaration (certifying minimum 60% remaining shelf life)"
+        ]
+      }
+    },
+    {
+      "chapter": "20",
+      "hs_range": "16-24",
+      "scope": "Preparations of Vegetables, Fruit, Nuts or Other Plant Parts",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Health Certificate",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "Lab Test Report",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "Foreign Food Facility Bioterrorism Registration Confirmation"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "FSSAI Food Importer License",
+          "Shelf-Life Declaration (certifying minimum 60% remaining shelf life)"
+        ]
+      }
+    },
+    {
+      "chapter": "21",
+      "hs_range": "16-24",
+      "scope": "Miscellaneous Edible Preparations",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "Health Certificate",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "APEDA Certificate",
+          "Lab Test Report",
+          "Certificate of Free Sale (CFS)",
+          "Allergen Declaration",
+          "Microbiological Analysis Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice Confirmation (PNSI Number)",
+          "Foreign Food Facility Bioterrorism Registration Confirmation"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "FSSAI Food Importer License",
+          "Shelf-Life Declaration (certifying minimum 60% remaining shelf life)"
+        ]
+      }
+    },
+    {
+      "chapter": "22",
+      "hs_range": "16-24",
+      "scope": "Beverages, Spirits and Vinegar",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration",
+          "TTB Permit (alcohol)",
+          "Health Certificate",
+          "Label Approval (COLA - alcohol)",
+          "TTB Form 5110.30 (Drawback/Exemption for Spirits/Wines)",
+          "Certificate of Age and Origin"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License",
+          "Excise Clearance",
+          "Health Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice",
+          "TTB Import Permit (alcohol)",
+          "CBP Entry Documents",
+          "TTB Certificate of Label Approval (COLA - Form 5100.31)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "FSSAI NOC",
+          "Customs/Excise Permit (alcohol)",
+          "State Excise Duty Import NOC / Transport Permit",
+          "FSSAI Beverage Standard Lab Testing Report"
+        ]
+      }
+    },
+    {
+      "chapter": "23",
+      "hs_range": "16-24",
+      "scope": "Residues & Waste from Food Industries; Prepared Animal Fodder",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration (if applicable)",
+          "USDA APHIS Phytosanitary Certificate (plant-based fodder)",
+          "Laboratory Analysis Certificate (heavy metals, mycotoxins)",
+          "BSE/TSE-Free Declarations"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License (if applicable)",
+          "Phytosanitary Certificate (plant-based fodder)",
+          "Laboratory Analysis Certificate (heavy metals, mycotoxins)",
+          "BSE/TSE-Free Declarations"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice (if applicable)",
+          "USDA APHIS Import Permit (animal feed)",
+          "Original Foreign Phytosanitary or Veterinary Certificate"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "AQCS/Plant Quarantine Clearance (feed products)",
+          "Original Foreign Phytosanitary or Veterinary Certificate",
+          "Sanitary Import Permit (SIP - DAHD)"
+        ]
+      }
+    },
+    {
+      "chapter": "24",
+      "hs_range": "16-24",
+      "scope": "Tobacco & Manufactured Tobacco Substitutes",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "TTB Permit (tobacco)",
+          "FDA Registration (tobacco products)",
+          "TTB Form 5220.29 (Notice of Release)",
+          "Fumigation Certificate (for unmanufactured raw leaf tobacco)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Excise Clearance",
+          "Tobacco Board Certificate",
+          "Fumigation Certificate (for unmanufactured raw leaf tobacco)"
+        ]
+      },
+      "import": {
+        "US": [
+          "TTB Import Permit (tobacco)",
+          "FDA Clearance (tobacco products)",
+          "CBP Entry Documents",
+          "FDA Center for Tobacco Products (CTP) Ingredient Listing",
+          "TTB Tobacco Importer Bond"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "Customs/Excise Permit (tobacco)",
+          "COTPA Health Warning Packaging Compliance Declaration",
+          "Central Excise/Customs Bond"
+        ]
+      }
+    },
+    {
+      "chapter": "25",
+      "hs_range": "25-27",
+      "scope": "Salt, Sulfur, Earths, Stone, Plastering Materials, Lime & Cement",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS (if applicable)",
+          "Certificate of Sampling & Chemical Analysis (purity, grade, moisture)",
+          "Radiation-Free Certificate (ores/slags)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "MSDS (if applicable)",
+          "Quality/Analysis Certificate",
+          "Certificate of Sampling & Chemical Analysis (purity, grade, moisture)",
+          "Radiation-Free Certificate (ores/slags)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (if applicable)",
+          "TSCA Chemical Certification (Section 13)",
+          "DOT Hazmat Transport Papers (fuels/hydrocarbons)"
+        ],
+        "India": [
+          "DGFT Import License (if restricted)",
+          "Pre-Shipment Inspection Certificate (PSIC - for mineral/metallic waste)",
+          "BIS QCO Certificate (for cement/gypsum)"
+        ]
+      }
+    },
+    {
+      "chapter": "26",
+      "hs_range": "25-27",
+      "scope": "Ores, Slag and Ash",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS",
+          "Export License (certain strategic minerals under EAR)",
+          "Certificate of Sampling & Chemical Analysis (purity, grade, moisture)",
+          "Radiation-Free Certificate (ores/slags)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (restricted ores)",
+          "MSDS",
+          "Quality/Analysis Certificate",
+          "Certificate of Sampling & Chemical Analysis (purity, grade, moisture)",
+          "Radiation-Free Certificate (ores/slags)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (if applicable)",
+          "TSCA Chemical Certification (Section 13)",
+          "DOT Hazmat Transport Papers (fuels/hydrocarbons)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Pollution Control Clearance (if applicable)",
+          "Pre-Shipment Inspection Certificate (PSIC - for mineral/metallic waste)"
+        ]
+      }
+    },
+    {
+      "chapter": "27",
+      "hs_range": "25-27",
+      "scope": "Mineral Fuels, Oils, Waxes & Bituminous Substances",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS",
+          "Export License (certain fuels under EAR)",
+          "Certificate of Sampling & Chemical Analysis (purity, grade, moisture)",
+          "Radiation-Free Certificate (ores/slags)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (restricted fuels)",
+          "MSDS",
+          "Quality/Analysis Certificate",
+          "Certificate of Sampling & Chemical Analysis (purity, grade, moisture)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance",
+          "DOE Permit (certain fuel imports)",
+          "TSCA Chemical Certification (Section 13)",
+          "DOT Hazmat Transport Papers (fuels/hydrocarbons)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Pollution Control Clearance (if applicable)",
+          "Pre-Shipment Inspection Certificate (PSIC - for mineral/metallic waste)"
+        ]
+      }
+    },
+    {
+      "chapter": "28",
+      "hs_range": "28-38",
+      "scope": "Inorganic Chemicals",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "EPA Registration",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "TSCA Certification",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "IMDG Container Packing Certificate (for maritime DG transport)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (if restricted)",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "SCOMET License (if dual-use)",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "IMDG Container Packing Certificate (for maritime DG transport)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance",
+          "TSCA Section 13 Positive/Negative Certification",
+          "DEA Form 486 (for List I/II precursor chemicals)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Pollution Control Board NOC",
+          "Mandatory BIS Registration / ISI Mark (under Chemical QCOs)",
+          "CPCB Hazardous Waste Import Clearance"
+        ]
+      }
+    },
+    {
+      "chapter": "29",
+      "hs_range": "28-38",
+      "scope": "Organic Chemicals",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "EPA Registration",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "TSCA Certification",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "IMDG Container Packing Certificate (for maritime DG transport)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (if restricted)",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "SCOMET License (if dual-use/precursor chemical)",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "IMDG Container Packing Certificate (for maritime DG transport)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance",
+          "TSCA Section 13 Positive/Negative Certification",
+          "DEA Form 486 (for List I/II precursor chemicals)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Pollution Control Board NOC",
+          "Narcotics Control Bureau Permit (precursor chemicals)",
+          "Mandatory BIS Registration / ISI Mark (under Chemical QCOs)",
+          "CPCB Hazardous Waste Import Clearance"
+        ]
+      }
+    },
+    {
+      "chapter": "30",
+      "hs_range": "28-38",
+      "scope": "Pharmaceutical Products",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Approval",
+          "Batch Test Reports",
+          "GMP / WHO-GMP Certificate",
+          "Certificate of a Pharmaceutical Product (COPP)",
+          "Continuous Temperature Datalogger Logs"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "CDSCO Drug License",
+          "Batch Test Reports",
+          "Free Sale Certificate",
+          "GMP / WHO-GMP Certificate",
+          "Certificate of a Pharmaceutical Product (COPP)",
+          "Continuous Temperature Datalogger Logs"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Import Permit (controlled substances)",
+          "DEA Permit (narcotics/controlled substances)",
+          "FDA IND/NDA Clearances",
+          "DEA Form 357 (Import Permit for Controlled Substances)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "CDSCO Form 10 (Import License)",
+          "CDSCO Form 41 (Registration of Foreign Manufacturing Site)"
+        ]
+      }
+    },
+    {
+      "chapter": "31",
+      "hs_range": "28-38",
+      "scope": "Fertilizers",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "EPA Registration",
+          "MSDS",
+          "Hazardous Goods Declaration (if applicable)",
+          "IMDG Dangerous Goods Declaration & Container Packing Certificate (ammonium nitrate/oxidizers)",
+          "Heavy Metals Test Report"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (if restricted)",
+          "MSDS",
+          "Fertilizer Control Order (FCO) Certificate",
+          "IMDG Dangerous Goods Declaration & Container Packing Certificate (ammonium nitrate/oxidizers)",
+          "Heavy Metals Test Report"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance",
+          "TSCA Chemical Certification"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Fertilizer Control Order (FCO) Registration"
+        ]
+      }
+    },
+    {
+      "chapter": "32",
+      "hs_range": "28-38",
+      "scope": "Tanning/Dyeing Extracts, Paints, Varnishes, Putty, Inks",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "EPA Registration (if hazardous)",
+          "MSDS",
+          "Hazardous Goods Declaration (if applicable)",
+          "Heavy Metals Test Report"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (if restricted)",
+          "MSDS",
+          "Hazardous Goods Declaration (if applicable)",
+          "Heavy Metals Test Report"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (if applicable)",
+          "TSCA Chemical Certification"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Pollution Control Board NOC (if applicable)",
+          "Mandatory BIS Certification under Dye/Pigment QCOs"
+        ]
+      }
+    },
+    {
+      "chapter": "33",
+      "hs_range": "28-38",
+      "scope": "Essential Oils, Cosmetics & Perfumery",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration (cosmetics)",
+          "MSDS",
+          "Safety Data Sheet (SDS - flash point documentation for alcohol-based fragrances)",
+          "Cruelty-Free / Non-Animal Testing Declaration"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "CDSCO/Cosmetic License",
+          "MSDS",
+          "Lab Test Report",
+          "Safety Data Sheet (SDS - flash point documentation for alcohol-based fragrances)",
+          "Cruelty-Free / Non-Animal Testing Declaration"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Clearance (cosmetics)",
+          "FDA MoCRA Compliance (Facility Registration & Cosmetic Product Listing Verification)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CDSCO Import Registration (cosmetics)",
+          "BIS Certification (if applicable)",
+          "CDSCO Form 43 (Cosmetics Import Registration Certificate)",
+          "Heavy Metals & Hexachlorophene Free Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "34",
+      "hs_range": "28-38",
+      "scope": "Soap, Waxes, Polishes & Candles",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS (if applicable)",
+          "TSCA Section 13 Certification",
+          "DOT Hazmat Classification (if aerosol or flammable)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "MSDS (if applicable)",
+          "BIS Certification / ISI Mark (for synthetic detergents and laundry soaps under mandatory QCOs)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (if applicable)",
+          "TSCA Section 13 Certification",
+          "DOT Hazmat Classification (if aerosol or flammable)"
+        ],
+        "India": [
+          "DGFT Import License (if applicable)",
+          "BIS Certification / ISI Mark (for synthetic detergents and laundry soaps under mandatory QCOs)"
+        ]
+      }
+    },
+    {
+      "chapter": "35",
+      "hs_range": "28-38",
+      "scope": "Albuminoidal Substances, Starches, Glues, Enzymes",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration (if food-grade)",
+          "MSDS",
+          "USDA APHIS Animal Product Permit (if gelatin/collagen is derived from ruminant or porcine tissue)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "FSSAI License (if food-grade)",
+          "MSDS"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Prior Notice (if food-grade)",
+          "USDA APHIS Animal Product Permit (if gelatin/collagen is derived from ruminant or porcine tissue)"
+        ],
+        "India": [
+          "DGFT Import Permit",
+          "AQCS Quarantine Clearance (for animal-origin gelatins)",
+          "FSSAI Import NOC (if food/pharma grade)"
+        ]
+      }
+    },
+    {
+      "chapter": "36",
+      "hs_range": "28-38",
+      "scope": "Explosives, Pyrotechnics & Matches",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "ATF Export License (explosives)",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "Class 1 IMDG Hazmat Transport Document",
+          "PESO / ATF Transport Pass"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "PESO License (explosives)",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "Class 1 IMDG Hazmat Transport Document",
+          "PESO / ATF Transport Pass"
+        ]
+      },
+      "import": {
+        "US": [
+          "ATF Import Permit (explosives)",
+          "ATF Form 6 (Application and Permit for Importation of Explosives)",
+          "UN EX Classification Approval Letter"
+        ],
+        "India": [
+          "DGFT Import License",
+          "PESO Import License / Storage NOC",
+          "Port Safety Controller NOC"
+        ]
+      }
+    },
+    {
+      "chapter": "37",
+      "hs_range": "28-38",
+      "scope": "Photographic & Cinematographic Goods",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS (chemical-based film products)",
+          "Safety Data Sheet (SDS - flash point & chemical reactivity for developer solutions)",
+          "TSCA Certification"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "MSDS (chemical-based film products)",
+          "Safety Data Sheet (SDS - flash point & chemical reactivity for developer solutions)",
+          "RoHS / E-Waste Compliance Declaration"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (if applicable)",
+          "Safety Data Sheet (SDS - flash point & chemical reactivity for developer solutions)",
+          "TSCA Certification"
+        ],
+        "India": [
+          "DGFT Import License (if applicable)",
+          "Safety Data Sheet (SDS - flash point & chemical reactivity for developer solutions)",
+          "RoHS / E-Waste Compliance Declaration"
+        ]
+      }
+    },
+    {
+      "chapter": "38",
+      "hs_range": "28-38",
+      "scope": "Miscellaneous Chemical Products",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "EPA Registration",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "TSCA Certification",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "Montreal Protocol ODS (Ozone Depleting Substances) Non-Usage Declaration",
+          "IMDG Container Packing Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (if restricted)",
+          "MSDS",
+          "Hazardous Goods Declaration",
+          "SCOMET License (if dual-use)",
+          "DGD - Dangerous Goods Declaration (at booking)",
+          "Montreal Protocol ODS (Ozone Depleting Substances) Non-Usage Declaration",
+          "IMDG Container Packing Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance",
+          "TSCA Import Certification",
+          "EPA Pesticide Notice of Arrival (EPA Form 3540-1 for biocides/disinfectants)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Pollution Control Board NOC",
+          "CPCB Import Authorization"
+        ]
+      }
+    },
+    {
+      "chapter": "39",
+      "hs_range": "39-40",
+      "scope": "Plastics & Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS (where applicable)",
+          "RoHS/REACH Compliance Documentation (destination-dependent)",
+          "FDA Food Contact Notification (FCN - for food-grade plastics/rubber wares)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT License (if restricted item)",
+          "MSDS (where applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (if applicable)",
+          "FDA Clearance (food-contact plastics)",
+          "FDA Food Contact Notification (FCN - for food-grade plastics/rubber wares)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "Mandatory BIS Certification (under Polyethylene/PVC/PPR QCOs)",
+          "CPCB Extended Producer Responsibility (EPR) Registration Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "40",
+      "hs_range": "39-40",
+      "scope": "Rubber & Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS (where applicable)",
+          "RoHS/REACH Compliance Documentation (destination-dependent)",
+          "FDA Food Contact Notification (FCN - for food-grade plastics/rubber wares)",
+          "DOT Tire Safety Compliance (HS 4011)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT License (if restricted item)",
+          "MSDS (where applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (if applicable)",
+          "FDA Food Contact Notification (FCN - for food-grade plastics/rubber wares)",
+          "DOT Tire Safety Compliance (HS 4011)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable, e.g., tyres)",
+          "Mandatory BIS Certification (under Pneumatic Tyres QCO)",
+          "CPCB Extended Producer Responsibility (EPR) Registration Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "41",
+      "hs_range": "41-43",
+      "scope": "Raw Hides and Skins (Other than Furskins) and Leather",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS (tanning chemicals)",
+          "EPA Registration (if chemically treated)",
+          "USFWS Form 3-177 (mandatory for exotic skins/furs)",
+          "USDA APHIS VS Form 16-4",
+          "CDC Etiological Agent Clearance (raw/untanned hides)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Council for Leather Exports (CLE) RCMC (Registration cum Membership Certificate)",
+          "DGFT Export License (raw/wet-blue hides - restricted category)",
+          "MSDS (tanning chemicals)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (chemically treated hides)",
+          "CITES Certificate (exotic/wild-sourced skins)",
+          "USFWS Form 3-177 (mandatory for exotic skins/furs)",
+          "USDA APHIS VS Form 16-4",
+          "CDC Etiological Agent Clearance (raw/untanned hides)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CITES Certificate (exotic/wild-sourced skins)",
+          "AQCS Clearance (untanned hides - biosecurity risk)",
+          "Sanitary Import Permit (SIP - DAHD, for raw/wet-blue hides)",
+          "WCCB Clearance Certificate (exotic skins)"
+        ]
+      }
+    },
+    {
+      "chapter": "42",
+      "hs_range": "41-43",
+      "scope": "Articles of Leather; Saddlery/Harness; Travel Goods, Handbags",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CITES Certificate (exotic leather - python/crocodile/alligator)",
+          "USFWS Form 3-177 (mandatory for exotic skins/furs)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Council for Leather Exports (CLE) RCMC",
+          "CITES Certificate (exotic leather)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CITES Certificate (exotic leather)",
+          "USFWS Form 3-177 (mandatory for exotic skins/furs)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CITES Certificate (exotic leather)",
+          "WCCB Clearance Certificate (exotic skins)"
+        ]
+      }
+    },
+    {
+      "chapter": "43",
+      "hs_range": "41-43",
+      "scope": "Furskins and Artificial Fur",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CITES Certificate",
+          "Fur Products Labeling Act Compliance (FTC)",
+          "USFWS Form 3-177 (mandatory for exotic skins/furs)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "CITES Certificate",
+          "Wildlife (Protection) Act NOC (WCCB)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CITES Certificate",
+          "Fur Products Labeling Act Compliance (FTC)",
+          "USFWS Form 3-177 (mandatory for exotic skins/furs)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CITES Certificate",
+          "WCCB NOC",
+          "WCCB Clearance Certificate (exotic skins)"
+        ]
+      }
+    },
+    {
+      "chapter": "44",
+      "hs_range": "44-46",
+      "scope": "Wood and Articles of Wood; Wood Charcoal",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "ISPM-15 Certificate (wood packaging material)",
+          "USDA Lacey Act Declaration (PPQ 505 - botanical genus/species & country of harvest)",
+          "Fumigation/Heat Treatment Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate",
+          "DGFT Export License (restricted timber species)",
+          "ISPM-15 Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Original Foreign Phytosanitary Certificate",
+          "ISPM-15 Certificate",
+          "USDA Lacey Act Declaration (PPQ 505 - botanical genus/species & country of harvest)",
+          "Fumigation/Heat Treatment Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Original Foreign Phytosanitary Certificate",
+          "ISPM-15 Certificate",
+          "CITES Certificate (rosewood/red sanders/agarwood)",
+          "Plant Quarantine Import Permit (PQ02)"
+        ]
+      }
+    },
+    {
+      "chapter": "45",
+      "hs_range": "44-46",
+      "scope": "Cork and Articles of Cork",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate",
+          "USDA Lacey Act Declaration (PPQ 505 - botanical genus/species & country of harvest)",
+          "Fumigation/Heat Treatment Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Original Foreign Phytosanitary Certificate",
+          "USDA Lacey Act Declaration (PPQ 505 - botanical genus/species & country of harvest)",
+          "Fumigation/Heat Treatment Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Original Foreign Phytosanitary Certificate",
+          "Plant Quarantine Import Permit (PQ02)"
+        ]
+      }
+    },
+    {
+      "chapter": "46",
+      "hs_range": "44-46",
+      "scope": "Manufactures of Straw, Esparto, Basketware & Wickerwork",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Fumigation Certificate (if required)",
+          "USDA Lacey Act Declaration (PPQ 505 - botanical genus/species & country of harvest)",
+          "Fumigation/Heat Treatment Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary/Fumigation Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Original Foreign Phytosanitary Certificate",
+          "USDA Lacey Act Declaration (plant material components)",
+          "USDA Lacey Act Declaration (PPQ 505 - botanical genus/species & country of harvest)",
+          "Fumigation/Heat Treatment Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Original Foreign Phytosanitary Certificate",
+          "Plant Quarantine Import Permit (PQ02)"
+        ]
+      }
+    },
+    {
+      "chapter": "47",
+      "hs_range": "47-48",
+      "scope": "Pulp of Wood or Other Fibrous Cellulosic Material",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA APHIS Phytosanitary Certificate (raw pulp)",
+          "Forest Stewardship Council (FSC) Certificate (optional/commercial requirement)",
+          "Lacey Act Declaration (paper products containing plant fiber)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Phytosanitary Certificate (raw pulp)",
+          "FSC Certificate (optional/commercial requirement)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Original Foreign Phytosanitary Certificate (raw pulp)",
+          "Lacey Act Declaration (paper products containing plant fiber)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Original Foreign Phytosanitary Certificate (raw pulp)",
+          "Paper Import Monitoring System (PIMS) Registration",
+          "Pre-Shipment Inspection Certificate (waste paper imports)"
+        ]
+      }
+    },
+    {
+      "chapter": "48",
+      "hs_range": "47-48",
+      "scope": "Paper and Paperboard; Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Food Contact Notification (food-grade paper/board)",
+          "FSC Certificate (optional)",
+          "Lacey Act Declaration (paper products containing plant fiber)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification (certain paper products)",
+          "FSC Certificate (optional)"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Clearance (food-contact paper)",
+          "FDA Food Contact Notification (food wrapping paper/cartons)",
+          "Lacey Act Declaration (paper products containing plant fiber)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (Paper QCO, where applicable)",
+          "Paper Import Monitoring System (PIMS) Registration",
+          "Pre-Shipment Inspection Certificate (waste paper imports)"
+        ]
+      }
+    },
+    {
+      "chapter": "49",
+      "hs_range": "47-48",
+      "scope": "Printed Books, Newspapers, Pictures & Other Printed Matter",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Lacey Act Declaration (paper products containing plant fiber)"
+        ],
+        "India": [
+          "Certificate of Origin"
+        ]
+      },
+      "import": {
+        "US": [
+          "CBP Content Declaration (import restrictions on certain printed matter)",
+          "Lacey Act Declaration (paper products containing plant fiber)"
+        ],
+        "India": [
+          "DGFT Import License (if applicable)",
+          "Customs Content Declaration (Customs Act restrictions on objectionable/seditious material)"
+        ]
+      }
+    },
+    {
+      "chapter": "50",
+      "hs_range": "50-63",
+      "scope": "Silk",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Fiber Products Identification Act Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate",
+          "Central Silk Board Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "FTC Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "51",
+      "hs_range": "50-63",
+      "scope": "Wool, Fine or Coarse Animal Hair; Horsehair Yarn & Fabric",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Wool Products Labeling Act Compliance",
+          "USDA APHIS Veterinary/Sanitary Certificate (raw wool)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate",
+          "AQCS Certificate (raw wool - biosecurity)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "FTC Wool Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "AQCS Clearance (raw wool)",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "52",
+      "hs_range": "50-63",
+      "scope": "Cotton",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "USDA Cotton Quality/Classing Certificate",
+          "FTC Textile Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate",
+          "Cotton Corporation of India Quality Certificate (if applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Phytosanitary Certificate (raw cotton)",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "53",
+      "hs_range": "50-63",
+      "scope": "Other Vegetable Textile Fibers; Paper Yarn & Woven Fabrics",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "54",
+      "hs_range": "50-63",
+      "scope": "Man-Made Filaments; Strip and the Like of Man-Made Textile Materials",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Fiber Products Identification Act Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "Mandatory BIS Registration (QCOs for Polyester, Viscose, Nylon yarns/fibers)",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "55",
+      "hs_range": "50-63",
+      "scope": "Man-Made Staple Fibers",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Registration (QCOs for Polyester, Viscose, Nylon staple fibers)",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "56",
+      "hs_range": "50-63",
+      "scope": "Wadding, Felt, Nonwovens; Special Yarns; Twine, Cordage, Ropes",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "57",
+      "hs_range": "50-63",
+      "scope": "Carpets and Other Textile Floor Coverings",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC Flammable Fabrics Act Certificate",
+          "FTC Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Carpet Export Promotion Council (CEPC) Registration",
+          "Textile Committee Inspection Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "CPSC Flammable Fabrics Act Certificate",
+          "Uruguay Round Agreements Act Certificate of Origin",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "58",
+      "hs_range": "50-63",
+      "scope": "Special Woven Fabrics; Tufted Textiles; Lace; Tapestries; Trimmings",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "59",
+      "hs_range": "50-63",
+      "scope": "Impregnated, Coated, Covered or Laminated Textile Fabrics",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS (coated/chemically treated fabrics)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate",
+          "MSDS (coated fabrics)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "60",
+      "hs_range": "50-63",
+      "scope": "Knitted or Crocheted Fabrics",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Labeling Compliance",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "Uyghur Forced Labor Prevention Act (UFLPA) Supply Chain Traceability Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Azo Dye Test Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "61",
+      "hs_range": "50-63",
+      "scope": "Articles of Apparel and Clothing Accessories, Knitted or Crocheted",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "ESG / Social Labor Compliance Audit Documentation",
+          "FTC Care Labeling Compliance",
+          "UFLPA Traceability Documentation",
+          "CPSC General Certificate of Conformity (GCC - flammability, 16 CFR Part 1610)",
+          "CPSIA Certificate (children's wear)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "ESG / Social Labor Compliance Documentation",
+          "Apparel Export Promotion Council (AEPC) Registration"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "CPSC Flammability/Children's Sleepwear Compliance (if applicable)",
+          "UFLPA Traceability Documentation",
+          "CPSC General Certificate of Conformity (GCC - flammability, 16 CFR Part 1610)",
+          "CPSIA Certificate (children's wear)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Fumigation Certificate (mandatory for HS 6309 worn clothing)",
+          "Textile Committee Azo-Free Testing Certificate",
+          "DGFT License (used clothing)"
+        ]
+      }
+    },
+    {
+      "chapter": "62",
+      "hs_range": "50-63",
+      "scope": "Articles of Apparel and Clothing Accessories, Not Knitted or Crocheted",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "ESG / Social Labor Compliance Audit Documentation",
+          "FTC Care Labeling Compliance",
+          "UFLPA Traceability Documentation",
+          "CPSC General Certificate of Conformity (GCC - flammability, 16 CFR Part 1610)",
+          "CPSIA Certificate (children's wear)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "ESG / Social Labor Compliance Documentation",
+          "Apparel Export Promotion Council (AEPC) Registration"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "CPSC Flammability/Children's Sleepwear Compliance (if applicable)",
+          "UFLPA Traceability Documentation",
+          "CPSC General Certificate of Conformity (GCC - flammability, 16 CFR Part 1610)",
+          "CPSIA Certificate (children's wear)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Fumigation Certificate (mandatory for HS 6309 worn clothing)",
+          "Textile Committee Azo-Free Testing Certificate",
+          "DGFT License (used clothing)"
+        ]
+      }
+    },
+    {
+      "chapter": "63",
+      "hs_range": "50-63",
+      "scope": "Other Made-Up Textile Articles; Sets; Worn Clothing and Rags",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FTC Textile Labeling Compliance",
+          "UFLPA Traceability Documentation",
+          "CPSC General Certificate of Conformity (GCC - flammability, 16 CFR Part 1610)",
+          "CPSIA Certificate (children's wear)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Textile Committee Inspection Certificate",
+          "Fumigation Certificate (worn clothing/rags)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Uruguay Round Agreements Act Certificate of Origin (textiles)",
+          "EPA/CDC Clearance (worn clothing - biosecurity, if applicable)",
+          "UFLPA Traceability Documentation",
+          "CPSC General Certificate of Conformity (GCC - flammability, 16 CFR Part 1610)",
+          "CPSIA Certificate (children's wear)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Fumigation Certificate (mandatory for HS 6309 worn clothing)",
+          "Textile Committee Azo-Free Testing Certificate",
+          "DGFT License (used clothing)"
+        ]
+      }
+    },
+    {
+      "chapter": "64",
+      "hs_range": "64-67",
+      "scope": "Footwear, Gaiters and the Like",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC Compliance (if applicable)",
+          "CPSC General Certificate of Conformity (GCC)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Council for Leather Exports RCMC (leather footwear)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CPSC/FTC Labeling Compliance",
+          "CPSC General Certificate of Conformity (GCC)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Footwear Quality Control Order)"
+        ]
+      }
+    },
+    {
+      "chapter": "65",
+      "hs_range": "64-67",
+      "scope": "Headgear and Parts Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC General Certificate of Conformity (GCC)"
+        ],
+        "India": [
+          "Certificate of Origin"
+        ]
+      },
+      "import": {
+        "US": [
+          "CPSC/FTC Labeling Compliance (if applicable)",
+          "CPSC General Certificate of Conformity (GCC)"
+        ],
+        "India": [
+          "DGFT Import License"
+        ]
+      }
+    },
+    {
+      "chapter": "66",
+      "hs_range": "64-67",
+      "scope": "Umbrellas, Walking Sticks, Whips and Parts Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC General Certificate of Conformity (GCC)"
+        ],
+        "India": [
+          "Certificate of Origin"
+        ]
+      },
+      "import": {
+        "US": [
+          "CPSC Compliance (if applicable)",
+          "CPSC General Certificate of Conformity (GCC)"
+        ],
+        "India": [
+          "DGFT Import License"
+        ]
+      }
+    },
+    {
+      "chapter": "67",
+      "hs_range": "64-67",
+      "scope": "Prepared Feathers/Down; Artificial Flowers; Articles of Human Hair",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CITES Certificate (exotic feathers)",
+          "USDA APHIS Veterinary Certificate (feather/avian-origin material)",
+          "CPSC General Certificate of Conformity (GCC)",
+          "USFWS Form 3-177 (avian/feather goods, HS 67)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "CITES Certificate (exotic feathers)",
+          "AQCS Clearance (avian-origin material)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CITES Certificate (exotic feathers)",
+          "USDA APHIS Import Permit (avian-origin material)",
+          "CPSC General Certificate of Conformity (GCC)",
+          "USFWS Form 3-177 (avian/feather goods, HS 67)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CITES Certificate",
+          "AQCS Clearance Certificate (avian feathers/down, HS 67)"
+        ]
+      }
+    },
+    {
+      "chapter": "68",
+      "hs_range": "68-70",
+      "scope": "Articles of Stone, Plaster, Cement, Asbestos, Mica",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "EPA Asbestos Certification (if applicable - restricted/banned category)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "MSDS (asbestos-containing products, if applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA TSCA Asbestos Ban Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (cement/stone products, where applicable)"
+        ]
+      }
+    },
+    {
+      "chapter": "69",
+      "hs_range": "68-70",
+      "scope": "Ceramic Products",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Food Contact Notification (ceramic tableware - lead/cadmium testing)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification (ceramic tableware)",
+          "Lab Test Report (lead/cadmium)"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Lead/Cadmium Testing Certificate (ceramic tableware)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Ceramic Tiles, Sanitary Ware QCOs)"
+        ]
+      }
+    },
+    {
+      "chapter": "70",
+      "hs_range": "68-70",
+      "scope": "Glass and Glassware",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Food Contact Notification (glassware)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA Clearance (food-contact glassware)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Safety Glass QCOs)"
+        ]
+      }
+    },
+    {
+      "chapter": "71",
+      "hs_range": "71-71",
+      "scope": "Natural/Cultured Pearls, Precious Stones, Precious Metals, Jewellery, Coins",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Kimberley Process Certificate (rough diamonds)",
+          "FinCEN/Bank Secrecy Act Reporting (precious metals - AML)",
+          "USFWS Form 3-177 (natural pearls, if wildlife-sourced)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Kimberley Process Certificate (rough diamonds)",
+          "Gem & Jewellery Export Promotion Council (GJEPC) Certificate",
+          "DGFT Export License (gold/silver - restricted category)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Kimberley Process Certificate (rough diamonds)",
+          "FinCEN/BSA Reporting Requirements",
+          "USFWS Form 3-177 (natural pearls, coral jewelry)"
+        ],
+        "India": [
+          "DGFT Import License (gold/silver via RBI-nominated agencies)",
+          "Kimberley Process Certificate (rough diamonds)",
+          "Customs Bonded Warehouse Clearance"
+        ]
+      }
+    },
+    {
+      "chapter": "72",
+      "hs_range": "72-83",
+      "scope": "Iron and Steel",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Section 232 Steel/Aluminum Country of Melt and Pour Declaration",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate",
+          "Pre-Shipment Inspection Certificate (PSIC)",
+          "DGFT Export License (if restricted grade)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Section 232 Steel Tariff Documentation",
+          "AD/CVD Certification (if applicable)",
+          "Section 232 Steel/Aluminum Country of Melt and Pour Declaration",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Steel & Steel Products QCO)",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)",
+          "Steel Import Monitoring System (SIMS) Registration"
+        ]
+      }
+    },
+    {
+      "chapter": "73",
+      "hs_range": "72-83",
+      "scope": "Articles of Iron or Steel",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Section 232 Steel/Aluminum Country of Melt and Pour Declaration",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate",
+          "BIS Certification (if applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Section 232 Documentation",
+          "AD/CVD Certification (if applicable)",
+          "Section 232 Steel/Aluminum Country of Melt and Pour Declaration",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Steel Products QCO)",
+          "Steel Import Monitoring System (SIMS) Registration"
+        ]
+      }
+    },
+    {
+      "chapter": "74",
+      "hs_range": "72-83",
+      "scope": "Copper and Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate",
+          "DGFT Export License (if restricted grade)"
+        ]
+      },
+      "import": {
+        "US": [
+          "AD/CVD Certification (if applicable)",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "Non-Ferrous Metals Import Monitoring System (NFMIMS) Registration",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)"
+        ]
+      }
+    },
+    {
+      "chapter": "75",
+      "hs_range": "72-83",
+      "scope": "Nickel and Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Non-Ferrous Metals Import Monitoring System (NFMIMS) Registration",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)"
+        ]
+      }
+    },
+    {
+      "chapter": "76",
+      "hs_range": "72-83",
+      "scope": "Aluminum and Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Section 232 Aluminum Tariff Documentation (if applicable)",
+          "Section 232 Steel/Aluminum Country of Melt and Pour Declaration",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate",
+          "DGFT Export License (if restricted grade)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Section 232 Aluminum Tariff Documentation",
+          "AD/CVD Certification (if applicable)",
+          "Section 232 Steel/Aluminum Country of Melt and Pour Declaration",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Aluminum QCO)",
+          "Non-Ferrous Metals Import Monitoring System (NFMIMS) Registration",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)"
+        ]
+      }
+    },
+    {
+      "chapter": "77",
+      "hs_range": "72-83",
+      "scope": "Reserved for Future Use",
+      "status": "reserved",
+      "note": "HS Chapter 77 is reserved for future use by the World Customs Organization and currently contains no legal classifications. No documentation requirements exist[cite: 5, 7].",
+      "export": {
+        "US": [],
+        "India": []
+      },
+      "import": {
+        "US": [],
+        "India": []
+      }
+    },
+    {
+      "chapter": "78",
+      "hs_range": "72-83",
+      "scope": "Lead and Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MSDS",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate",
+          "MSDS"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA Clearance (lead content restrictions)",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CPCB Clearance (hazardous/lead-bearing scrap)",
+          "Non-Ferrous Metals Import Monitoring System (NFMIMS) Registration",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)"
+        ]
+      }
+    },
+    {
+      "chapter": "79",
+      "hs_range": "72-83",
+      "scope": "Zinc and Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Non-Ferrous Metals Import Monitoring System (NFMIMS) Registration",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)"
+        ]
+      }
+    },
+    {
+      "chapter": "80",
+      "hs_range": "72-83",
+      "scope": "Tin and Articles Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Non-Ferrous Metals Import Monitoring System (NFMIMS) Registration",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)"
+        ]
+      }
+    },
+    {
+      "chapter": "81",
+      "hs_range": "72-83",
+      "scope": "Other Base Metals; Cermets",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Export Control Classification Number (ECCN) documentation (certain strategic metals)",
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Mill Test Certificate",
+          "SCOMET License (certain strategic metals)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Mill Test Certificate (MTC - EN 10204 3.1)",
+          "AD/CVD Non-Reimbursement Certificate"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Non-Ferrous Metals Import Monitoring System (NFMIMS) Registration",
+          "Pre-Shipment Inspection Certificate (PSIC - unexploded/radiation scrap)"
+        ]
+      }
+    },
+    {
+      "chapter": "82",
+      "hs_range": "72-83",
+      "scope": "Tools, Implements, Cutlery, Spoons and Forks of Base Metal",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC Consumer Safety Compliance (sharp blades/power tools)",
+          "AD/CVD Certifications (cutlery, fasteners)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification (if applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CPSC Compliance (if applicable, sharp consumer items)",
+          "CPSC Consumer Safety Compliance (sharp blades/power tools)",
+          "AD/CVD Certifications (cutlery, fasteners)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification",
+          "Mandatory BIS Certification (Hand Tools, Fasteners, Hinges/Hardware QCOs)"
+        ]
+      }
+    },
+    {
+      "chapter": "83",
+      "hs_range": "72-83",
+      "scope": "Miscellaneous Articles of Base Metal",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC Consumer Safety Compliance (sharp blades/power tools)",
+          "AD/CVD Certifications (cutlery, fasteners)"
+        ],
+        "India": [
+          "Certificate of Origin"
+        ]
+      },
+      "import": {
+        "US": [
+          "CBP Entry Documents",
+          "CPSC Consumer Safety Compliance (sharp blades/power tools)",
+          "AD/CVD Certifications (cutlery, fasteners)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Hand Tools, Fasteners, Hinges/Hardware QCOs)"
+        ]
+      }
+    },
+    {
+      "chapter": "84",
+      "hs_range": "84-85",
+      "scope": "Nuclear Reactors, Boilers, Machinery and Mechanical Appliances",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Export Control Classification Number (ECCN) / EAR Documentation",
+          "Technical Design Documentation (product spec)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "SCOMET License (dual-use machinery)",
+          "DGFT Export License (if restricted)",
+          "Technical Design Documentation (product spec)"
+        ]
+      },
+      "import": {
+        "US": [
+          "EPA/DOE Energy Efficiency Compliance (if applicable)",
+          "CBP Entry Documents",
+          "EPA Clean Air Act Declaration (non-road combustion engines/pumps)",
+          "OSHA NRTL Electrical Safety Certification"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "Chartered Engineer Certificate (CEC - second-hand/used machinery valuation)",
+          "Mandatory BIS Certification (Machinery & Electrical Equipment QCOs)"
+        ]
+      }
+    },
+    {
+      "chapter": "85",
+      "hs_range": "84-85",
+      "scope": "Electrical Machinery, Equipment and Parts; Sound/TV Recorders",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FCC Certification (radio-frequency devices)",
+          "RoHS / CE Compliance Documentation",
+          "MSDS (Lithium Battery Related)",
+          "Multimodal Dangerous Goods Form (IMO/IATA DGD - at booking for Class 9 Lithium Batteries)",
+          "Technical Design Documentation (product spec)",
+          "UN 38.3 Lithium Battery Test Summary"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification",
+          "RoHS / CE Compliance Documentation",
+          "MSDS (Lithium Battery Related)",
+          "Multimodal Dangerous Goods Form (IMO/IATA DGD - at booking for Class 9 Lithium Batteries)",
+          "DGFT Export License (SCOMET, if dual-use)",
+          "Technical Design Documentation (product spec)",
+          "UN 38.3 Lithium Battery Test Summary"
+        ]
+      },
+      "import": {
+        "US": [
+          "FCC Form 740 / Equipment Authorization (RF/Wi-Fi devices)",
+          "FDA Form 2877 (radiation-emitting electronics, displays, lasers)",
+          "UN 38.3 Lithium Battery Test Summary",
+          "DOE Energy Efficiency Compliance"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (mandatory for many electronics)",
+          "E-Waste (Management) Rules - EPR Registration",
+          "MeitY Compulsory Registration Scheme (CRS - BIS registration for electronics)",
+          "WPC ETA/Import License (wireless/Bluetooth)",
+          "CPCB EPR Registration (E-Waste and Batteries)",
+          "UN 38.3 Lithium Battery Test Summary"
+        ]
+      }
+    },
+    {
+      "chapter": "86",
+      "hs_range": "86-89",
+      "scope": "Railway/Tramway Locomotives, Rolling Stock and Parts",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "DOT/FRA Compliance Documentation",
+          "Technical Design Documentation (product spec)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License",
+          "Technical Design Documentation (product spec)"
+        ]
+      },
+      "import": {
+        "US": [
+          "DOT/FRA Compliance Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Type Approval Certificate (Research Designs & Standards Organisation - RDSO)"
+        ]
+      }
+    },
+    {
+      "chapter": "87",
+      "hs_range": "86-89",
+      "scope": "Vehicles Other Than Railway/Tramway Rolling Stock, and Parts",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "DOT/EPA Compliance Certificate",
+          "Technical Design Documentation (product spec)",
+          "DOT Form HS-7 (NHTSA motor vehicle safety compliance)",
+          "EPA Form 3520-1 (engine emissions compliance)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (restricted vehicles/engines)",
+          "Technical Design Documentation (product spec)"
+        ]
+      },
+      "import": {
+        "US": [
+          "DOT Form HS-7 (NHTSA motor vehicle safety compliance)",
+          "EPA Form 3520-1 (engine emissions compliance)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CMVR Type Approval / Homologation Certificate (ARAI/ICAT for road vehicles)"
+        ]
+      }
+    },
+    {
+      "chapter": "88",
+      "hs_range": "86-89",
+      "scope": "Aircraft, Spacecraft and Parts Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FAA Export Certificate of Airworthiness",
+          "State Dept ITAR License (if defense article)",
+          "Technical Design Documentation (product spec)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT Export License (SCOMET)",
+          "DGCA NOC",
+          "Technical Design Documentation (product spec)"
+        ]
+      },
+      "import": {
+        "US": [
+          "FAA Import Airworthiness Documentation",
+          "ITAR Import Clearance (if defense article)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "DGCA Import Clearance/Type Certificate"
+        ]
+      }
+    },
+    {
+      "chapter": "89",
+      "hs_range": "86-89",
+      "scope": "Ships, Boats and Floating Structures",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "MARAD/USCG Documentation",
+          "Technical Design Documentation (product spec)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Directorate General of Shipping NOC",
+          "Technical Design Documentation (product spec)"
+        ]
+      },
+      "import": {
+        "US": [
+          "USCG Documentation"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Directorate General of Shipping Clearance"
+        ]
+      }
+    },
+    {
+      "chapter": "90",
+      "hs_range": "90-92",
+      "scope": "Optical, Photographic, Measuring, Medical or Surgical Instruments",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "FDA Registration (medical devices)",
+          "FCC Certification (if wireless-enabled)",
+          "FDA Medical Device Listing & 510(k) Premarket Notification",
+          "FDA Form 2877 (laser/radiation devices)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "CDSCO Medical Device Registration/License",
+          "BIS Certification (if applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "FDA 510(k)/CDRH Clearance (medical devices)",
+          "FCC Certification (if wireless-enabled)",
+          "FDA Medical Device Listing & 510(k) Premarket Notification",
+          "FDA Form 2877 (laser/radiation devices)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "CDSCO Medical Device Import License (Form MD-15)",
+          "Legal Metrology (LMPC) Certificate (measuring instruments/thermometers)",
+          "Atomic Energy Regulatory Board (AERB) NOC (X-ray/radiation devices)"
+        ]
+      }
+    },
+    {
+      "chapter": "91",
+      "hs_range": "90-92",
+      "scope": "Clocks and Watches and Parts Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CBP Watch/Clock Detail Sheet (movement, case, battery origins)",
+          "CITES Appendix I/II Permit (rosewood/ivory components)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification (if applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CBP Entry Documents",
+          "CBP Watch/Clock Detail Sheet (movement, case, battery origins)",
+          "CITES Appendix I/II Permit (rosewood/ivory components)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Registration (wall clocks/timepieces)"
+        ]
+      }
+    },
+    {
+      "chapter": "92",
+      "hs_range": "90-92",
+      "scope": "Musical Instruments; Parts and Accessories Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CITES Certificate (instruments containing regulated wood/ivory components)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "CITES Certificate (regulated wood/ivory components)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CITES Certificate (regulated wood/ivory components)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "CITES Certificate (regulated wood/ivory components)"
+        ]
+      }
+    },
+    {
+      "chapter": "93",
+      "hs_range": "93-93",
+      "scope": "Arms and Ammunition; Parts and Accessories Thereof",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "State Dept ITAR License (defense articles)",
+          "DSP-5 / DSP-83 ITAR Export License",
+          "End-User Certificate (EUC)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "DGFT SCOMET License",
+          "Ministry of Home Affairs / Ministry of Defence NOC",
+          "End-User Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "State Dept ITAR Clearance",
+          "ATF Form 6 / 6A (Application and Permit for Importation of Firearms/Ammunition)",
+          "DSP-5 / DSP-83 ITAR Export License",
+          "End-User Certificate (EUC)"
+        ],
+        "India": [
+          "DGFT Import License (highly restricted category)",
+          "Ministry of Home Affairs (MHA) Import License",
+          "Arms Act Import Clearance",
+          "Police Transit Permit",
+          "End-User Certificate (EUC)"
+        ]
+      }
+    },
+    {
+      "chapter": "94",
+      "hs_range": "94-96",
+      "scope": "Furniture, Bedding, Lamps, Prefabricated Buildings",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC Flammability Compliance (upholstered furniture/mattresses)",
+          "EPA TSCA Title VI Formaldehyde Compliance (composite wood furniture)",
+          "General Certificate of Conformity (GCC - mattresses)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification (if applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "CPSC Flammability Compliance",
+          "EPA TSCA Title VI Formaldehyde Compliance (composite wood furniture)",
+          "General Certificate of Conformity (GCC - mattresses)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)",
+          "Mandatory BIS Certification (Furniture QCO)"
+        ]
+      }
+    },
+    {
+      "chapter": "95",
+      "hs_range": "94-96",
+      "scope": "Toys, Games and Sports Requisites; Parts and Accessories",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "CPSC Children's Product Certificate (CPC - toys/infant products)",
+          "General Certificate of Conformity (GCC - sporting goods)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "BIS Certification (Toys Quality Control Order)",
+          "Lab Test Report"
+        ]
+      },
+      "import": {
+        "US": [
+          "CPSC Children's Product Certificate (CPC - toys/infant products)",
+          "General Certificate of Conformity (GCC - sporting goods)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Mandatory BIS Certification (Toys QCO)",
+          "DGFT Toy Import Safety Testing Certificate (sampling at port)"
+        ]
+      }
+    },
+    {
+      "chapter": "96",
+      "hs_range": "94-96",
+      "scope": "Miscellaneous Manufactured Articles",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "General Certificate of Conformity (GCC - lighters/pens)"
+        ],
+        "India": [
+          "Certificate of Origin"
+        ]
+      },
+      "import": {
+        "US": [
+          "CBP Entry Documents",
+          "General Certificate of Conformity (GCC - lighters/pens)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "BIS Certification (if applicable)"
+        ]
+      }
+    },
+    {
+      "chapter": "97",
+      "hs_range": "97-97",
+      "scope": "Works of Art, Collectors' Pieces and Antiques",
+      "export": {
+        "US": [
+          "Certificate of Origin",
+          "Provenance/Appraisal Documentation",
+          "Cultural Property Implementation Act (CPIA) Documentation",
+          "Certificate of Antiquity (>100 years proof for duty-free entry)"
+        ],
+        "India": [
+          "Certificate of Origin",
+          "Archaeological Survey of India (ASI) NOC (antiquities over 100 years - Antiquities and Art Treasures Act) / Non-Antiquity Export Clearance NOC",
+          "Export Permit for Antiques",
+          "Customs Valuation/Appraisal Certificate"
+        ]
+      },
+      "import": {
+        "US": [
+          "Cultural Property Implementation Act (CPIA) Documentation (required if from restricted-source country)",
+          "Provenance Documentation",
+          "Certificate of Antiquity (>100 years proof for duty-free entry)"
+        ],
+        "India": [
+          "DGFT Import License",
+          "Customs Valuation/Appraisal Certificate",
+          "Archaeological Survey of India (ASI) Non-Antiquity / Export Clearance NOC"
+        ]
+      }
+    },
+    {
+      "chapter": "98",
+      "hs_range": "98-99",
+      "scope": "Special Classification Provisions (US: Returned Goods/Temporary Imports; India: Project Imports/Baggage)",
+      "export": {
+        "US": [
+          "Certificate of Origin (where applicable)",
+          "CBP Form 3311 (Declaration for Free Entry of Returned American Products)",
+          "ATA Carnet (temporary imports/exhibitions)"
+        ],
+        "India": [
+          "Certificate of Origin (where applicable)"
+        ]
+      },
+      "import": {
+        "US": [
+          "Proof of Prior Export/US Goods Returned Documentation",
+          "CBP Form 3311 (Declaration for Free Entry of Returned American Products)",
+          "ATA Carnet (temporary imports/exhibitions)"
+        ],
+        "India": [
+          "Project Import Registration Contract (Project Imports Regulations)",
+          "Passenger Baggage Declaration Form"
+        ]
+      }
+    },
+    {
+      "chapter": "99",
+      "hs_range": "98-99",
+      "scope": "Temporary Legislation / Special Tariff Provisions (Trade Remedy, Section 301, Miscellaneous)",
+      "export": {
+        "US": [],
+        "India": []
+      },
+      "import": {
+        "US": [
+          "Special Program Indicator Documentation",
+          "Section 301 / Section 232 Tariff Exclusion Documentation",
+          "USMCA/Generalized System of Preferences (GSP) Documentation"
+        ],
+        "India": [
+          "DGFT Import License (where a specific notification applies)",
+          "DGFT Specific Exemption Notification / Concessional Customs Duty Certificate",
+          "Anti-Dumping Duty Non-Applicability Certificate"
+        ]
+      },
+      "export_note": "Chapter 99 is an import-side tariff mechanism used to apply trade remedies, Section 301/232 exclusions, and temporary concessions[cite: 5, 7, 9]. It has no independent export documentation requirements; goods are exported under their permanent HS 01-97 headings[cite: 5, 7, 9]. Empty export arrays are intentional[cite: 5, 7, 9]."
+    }
+  ]
+}

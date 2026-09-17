@@ -22,6 +22,7 @@ import {
   Compass,
 } from 'lucide-react';
 import { getMinReadyDate, getMinDeliveryDate, SCOPE_INCOTERMS_MAP } from '../../utils/rfqConstants';
+import { ShipmentFlowVisualizer } from './ShipmentFlowVisualizer';
 import './Step1RouteScope.css';
 
 interface Step1RouteScopeProps {
@@ -642,6 +643,29 @@ export const Step1RouteScope: React.FC<Step1RouteScopeProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Dynamic Point-to-Point Operational Route & Leg Flows Visualizer */}
+      <div style={{ marginTop: '0.85rem' }}>
+        <ShipmentFlowVisualizer
+          mode={formData.mode}
+          serviceScope={formData.service_scope}
+          originName={formData.from_port_name || formData.origin_port_name}
+          destName={formData.to_port_name || formData.destination_port_name}
+          fromAddress={
+            typeof formData.from_address === 'string'
+              ? formData.from_address
+              : formData.from_address?.label || (formData.from_address?.city ? `${formData.from_address.city}, ${formData.from_address.country}` : undefined)
+          }
+          toAddress={
+            typeof formData.to_address === 'string'
+              ? formData.to_address
+              : formData.to_address?.label || (formData.to_address?.city ? `${formData.to_address.city}, ${formData.to_address.country}` : undefined)
+          }
+          hsCode={formData.hs_code}
+          isHazmat={formData.hazardous_materials}
+          isReefer={formData.temperature_control_required}
+        />
       </div>
     </div>
   );
