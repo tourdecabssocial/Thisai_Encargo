@@ -8,9 +8,19 @@ import {
 } from '../services/cargoDocService';
 import { generateSchemaQuotesForStage } from '../services/cargoChargesService';
 
+interface AggregatedHSDoc {
+  id: string;
+  docName: string;
+  chapter: string;
+  scope: string;
+  commodityName: string;
+  commodityIndex: number;
+}
+
 /**
  * Dynamically generates post-submission shipment stages, rates, and stage document checklists
  * strictly driven by the master schemas in Cargo Doc.json and Encargo_charges.json based on user submitted RFQ details.
+ * Support multi-commodity shipments by extracting HS compliance documents for ALL commodities and HS codes.
  */
 export const generateDynamicPostSubmissionStages = (
   record: SubmittedRFQRecord
@@ -30,12 +40,64 @@ export const generateDynamicPostSubmissionStages = (
 
   const tradeLane = resolveTradeLane(originText, destText);
   const schemaStages = getStageDocumentsFromSchema(tradeLane, scope);
-  const hsCompliance = getHSChapterComplianceFromSchema(p.hs_code, tradeLane);
+
+  // Extract all commodities (commercial items) from submitted payload
+  const commercialItems: Array<{ description?: string; originHsCode?: string; destHsCode?: string; hsCode?: string }> =
+    p.commercial_items && Array.isArray(p.commercial_items) && p.commercial_items.length > 0
+      ? p.commercial_items
+      : [
+          {
+            description: p.commodity_description || 'General Cargo',
+            originHsCode: p.hs_code,
+            destHsCode: p.destination_hs_code || p.hs_code,
+            hsCode: p.hs_code,
+          },
+        ];
+
+  // Aggregate Export Agency Documents (Origin) and Import Agency Permits (Destination) across ALL commodities & HS codes
+  const exportAgencyDocsList: AggregatedHSDoc[] = [];
+  const importAgencyDocsList: AggregatedHSDoc[] = [];
+
+  commercialItems.forEach((item, index) => {
+    const commName = item.description || `Commodity #${index + 1}`;
+
+    // 1. Origin HS Code -> Export Agency Documents
+    const originHs = item.originHsCode || item.hsCode || p.hs_code || p.origin_hs_code;
+    const originComp = getHSChapterComplianceFromSchema(originHs, tradeLane);
+    if (originComp && originComp.exportAgencyDocs) {
+      originComp.exportAgencyDocs.forEach((docName) => {
+        exportAgencyDocsList.push({
+          id: `exp-${index + 1}-${docName.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          docName,
+          chapter: originComp.chapter,
+          scope: originComp.scope,
+          commodityName: commName,
+          commodityIndex: index + 1,
+        });
+      });
+    }
+
+    // 2. Destination HS Code -> Import Agency Documents / PGA Permits
+    const destHs = item.destHsCode || item.hsCode || p.destination_hs_code || p.hs_code;
+    const destComp = getHSChapterComplianceFromSchema(destHs, tradeLane);
+    if (destComp && destComp.importAgencyDocs) {
+      destComp.importAgencyDocs.forEach((docName) => {
+        importAgencyDocsList.push({
+          id: `imp-${index + 1}-${docName.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          docName,
+          chapter: destComp.chapter,
+          scope: destComp.scope,
+          commodityName: commName,
+          commodityIndex: index + 1,
+        });
+      });
+    }
+  });
 
   // Dynamic helper: retrieves documents from Cargo Doc.json for stageId and applies user-specific extras
   const buildStageDocumentsFromSchema = (
     stageId: number,
-    additionalRegulatoryDocs: string[] = []
+    additionalRegulatoryDocs: Array<string | AggregatedHSDoc> = []
   ): StageDocument[] => {
     const stageSchema = schemaStages.find((s) => s.stage_id === stageId);
     if (!stageSchema) return [];
@@ -50,11 +112,17 @@ export const generateDynamicPostSubmissionStages = (
     }));
 
     // Append regulatory/commodity compliance documents from Cargo Doc.json (HS Chapter rules)
-    additionalRegulatoryDocs.forEach((docName, idx) => {
+    additionalRegulatoryDocs.forEach((docItem, idx) => {
+      const isObject = typeof docItem !== 'string';
+      const docName = isObject ? `${docItem.docName} (Commodity #${docItem.commodityIndex}: ${docItem.commodityName})` : docItem;
+      const descText = isObject
+        ? `HS Chapter ${docItem.chapter} (${docItem.scope}) mandatory requirement for Commodity #${docItem.commodityIndex} (${docItem.commodityName}) from Cargo Doc.json.`
+        : `Regulatory compliance requirement from Cargo Doc.json.`;
+
       docs.push({
         id: `doc-s${stageId}-reg-${idx + 1}`,
         name: docName,
-        description: `HS Chapter ${hsCompliance?.chapter || ''} (${hsCompliance?.scope || 'Regulatory Compliance'}) requirement from Cargo Doc.json.`,
+        description: descText,
         status: 'pending',
       });
     });
@@ -68,9 +136,9 @@ export const generateDynamicPostSubmissionStages = (
 
   // 1. First Mile Trucking (Stage 1 in Cargo Doc.json & Encargo_charges.json)
   if (scope === 'D2D' || scope === 'D2P') {
-    const stage1Extra: string[] = [];
-    if (hsCompliance && hsCompliance.exportAgencyDocs.length > 0) {
-      stage1Extra.push(...hsCompliance.exportAgencyDocs);
+    const stage1Extra: Array<string | AggregatedHSDoc> = [];
+    if (exportAgencyDocsList.length > 0) {
+      stage1Extra.push(...exportAgencyDocsList);
     }
     if (p.has_wood_packaging || p.crating_service_required) {
       const fumiDocs = getSpecialServiceDocumentsFromSchema('fumigation');
@@ -90,7 +158,7 @@ export const generateDynamicPostSubmissionStages = (
 
   // 2. Origin Port Handling & Export Customs (Stage 2 in Cargo Doc.json & Encargo_charges.json)
   if (scope === 'D2D' || scope === 'D2P' || scope === 'P2D' || p.origin_customs_clearance) {
-    const stage2Extra: string[] = [];
+    const stage2Extra: Array<string | AggregatedHSDoc> = [];
     if (p.hazardous_materials) {
       const hazDocs = getSpecialServiceDocumentsFromSchema('hazmat');
       stage2Extra.push(...hazDocs.map((d) => d.name));
@@ -112,7 +180,7 @@ export const generateDynamicPostSubmissionStages = (
     ? 'Main Haul – Air Freight Express'
     : `Main Haul – Ocean Freight (${p.load_type || 'FCL'})`;
 
-  const stage3Extra: string[] = [];
+  const stage3Extra: Array<string | AggregatedHSDoc> = [];
   if (p.temperature_control_required) {
     const reeferDocs = getSpecialServiceDocumentsFromSchema('reefer');
     stage3Extra.push(...reeferDocs.map((d) => d.name));
@@ -130,9 +198,9 @@ export const generateDynamicPostSubmissionStages = (
 
   // 4. Destination Customs & Import Clearance (Stage 4 in Cargo Doc.json & Encargo_charges.json)
   if (scope === 'D2D' || scope === 'P2D' || scope === 'P2P' || p.destination_customs_clearance) {
-    const stage4Extra: string[] = [];
-    if (hsCompliance && hsCompliance.importAgencyDocs.length > 0) {
-      stage4Extra.push(...hsCompliance.importAgencyDocs);
+    const stage4Extra: Array<string | AggregatedHSDoc> = [];
+    if (importAgencyDocsList.length > 0) {
+      stage4Extra.push(...importAgencyDocsList);
     }
 
     stages.push({
@@ -182,18 +250,18 @@ export const generateDynamicPostSubmissionStages = (
     });
   }
 
-  // Ensure export HS compliance documents are attached to the first stage of the route (e.g. for P2P/P2D)
-  if (hsCompliance && hsCompliance.exportAgencyDocs.length > 0 && stages.length > 0) {
+  // Ensure export HS compliance documents are attached to the first stage of the route if not already present
+  if (exportAgencyDocsList.length > 0 && stages.length > 0) {
     const hasExportDocs = stages.some((st) =>
-      st.documents.some((d) => hsCompliance.exportAgencyDocs.includes(d.name))
+      st.documents.some((d) => exportAgencyDocsList.some((ed) => d.name.includes(ed.docName)))
     );
     if (!hasExportDocs) {
       const firstStage = stages[0];
-      hsCompliance.exportAgencyDocs.forEach((docName, idx) => {
+      exportAgencyDocsList.forEach((expDoc, idx) => {
         firstStage.documents.push({
           id: `doc-${firstStage.id}-hs-exp-${idx + 1}`,
-          name: docName,
-          description: `HS Chapter ${hsCompliance.chapter} (${hsCompliance.scope}) mandatory export requirement from Cargo Doc.json.`,
+          name: `${expDoc.docName} (Commodity #${expDoc.commodityIndex}: ${expDoc.commodityName})`,
+          description: `HS Chapter ${expDoc.chapter} (${expDoc.scope}) mandatory export requirement for Commodity #${expDoc.commodityIndex} (${expDoc.commodityName}) from Cargo Doc.json.`,
           status: 'pending',
         });
       });

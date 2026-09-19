@@ -5,18 +5,13 @@ import {
   resolveTradeLane,
 } from './cargoDocService';
 
-export type TransportMode = 'Air' | 'FCL' | 'LCL' | 'Road' | 'Ship';
-export type ServiceType = 'Door-to-Door' | 'Door-to-Port' | 'Port-to-Door' | 'Port-to-Port';
-export type DocumentImportance = 'mandatory' | 'regulatory' | 'recommended' | 'conditional';
-
 export interface StageDocument {
   name: string;
-  importance: DocumentImportance;
+  importance: 'mandatory' | 'conditional' | 'recommended' | 'regulatory';
   issuer: string;
   recipient?: string;
   description: string;
   bullets?: string[];
-  applicableScopes?: ServiceType[];
 }
 
 export interface StageMilestone {
@@ -30,51 +25,91 @@ export interface RouteStage {
   stageNumber: number;
   title: string;
   subtitle: string;
-  iconType: 'pickup' | 'truck' | 'warehouse' | 'customs' | 'plane' | 'ship' | 'delivery' | 'file-text';
+  iconType: 'pickup' | 'customs' | 'ship' | 'plane' | 'delivery' | 'warehouse' | 'file-text' | 'truck';
   category: 'Origin' | 'Main Freight' | 'Destination';
   activities: string[];
   documents: StageDocument[];
   milestones: StageMilestone[];
-  proTip: string;
+  isCompleted?: boolean;
+  isInProgress?: boolean;
+  proTip?: string;
 }
 
-export interface LifecycleEngineInput {
-  transportMode: TransportMode;
-  serviceType: ServiceType;
+export interface LifecycleInput {
+  origin: string;
+  destination: string;
   originPortOrCity?: string;
   destinationPortOrCity?: string;
-  isHazmat?: boolean;
-  isReefer?: boolean;
-  incoterm?: string;
+  serviceType?: string;
+  transportMode?: string;
+  scope: string; // 'D2D' | 'D2P' | 'P2D' | 'P2P'
+  mode: string; // 'Ship' | 'Air'
   hsCode?: string;
+  commercialItems?: Array<{ description?: string; originHsCode?: string; destHsCode?: string; hsCode?: string }>;
+  isReefer?: boolean;
+  isHazmat?: boolean;
 }
 
-// Convert full service name to scope code ('D2D', 'D2P', 'P2D', 'P2P')
-const toScopeCode = (service: ServiceType): 'D2D' | 'D2P' | 'P2D' | 'P2P' => {
-  switch (service) {
-    case 'Door-to-Port': return 'D2P';
-    case 'Port-to-Door': return 'P2D';
-    case 'Port-to-Port': return 'P2P';
-    default: return 'D2D';
-  }
-};
+export type LifecycleEngineInput = LifecycleInput;
 
 /**
- * Dynamically generates shipment route lifecycle stages and document requirements
- * strictly leveraging Cargo Doc.json master schema.
+ * Generates dynamic, multi-commodity shipment route lifecycle stages driven by Cargo Doc.json.
  */
-export const generateShipmentRouteLifecycle = (input: LifecycleEngineInput): RouteStage[] => {
-  const mode = input.transportMode || 'FCL';
-  const service = input.serviceType || 'Door-to-Door';
-  const scopeCode = toScopeCode(service);
-  const origin = input.originPortOrCity || 'Origin Location';
-  const destination = input.destinationPortOrCity || 'Destination Location';
-  const isHazmat = Boolean(input.isHazmat);
-  const isReefer = Boolean(input.isReefer);
-
+export function generateShipmentRouteLifecycle(input: LifecycleInput): RouteStage[] {
+  const { origin, destination, scope, mode, isReefer, isHazmat } = input;
   const tradeLane = resolveTradeLane(origin, destination);
+  const scopeCode = (scope || 'D2D').toUpperCase() as 'D2D' | 'D2P' | 'P2D' | 'P2P';
   const schemaStages = getStageDocumentsFromSchema(tradeLane, scopeCode);
-  const hsCompliance = getHSChapterComplianceFromSchema(input.hsCode, tradeLane);
+
+  const commercialItems = input.commercialItems && input.commercialItems.length > 0
+    ? input.commercialItems
+    : [{ description: 'Cargo Item', originHsCode: input.hsCode, destHsCode: input.hsCode, hsCode: input.hsCode }];
+
+  interface AggregatedHSDoc {
+    docName: string;
+    chapter: string;
+    scope: string;
+    hsRange: string;
+    commodityName: string;
+    commodityIndex: number;
+  }
+
+  const exportAgencyDocsList: AggregatedHSDoc[] = [];
+  const importAgencyDocsList: AggregatedHSDoc[] = [];
+
+  commercialItems.forEach((item, index) => {
+    const commName = item.description || `Commodity #${index + 1}`;
+
+    const originHs = item.originHsCode || item.hsCode || input.hsCode;
+    const originComp = getHSChapterComplianceFromSchema(originHs, tradeLane);
+    if (originComp && originComp.exportAgencyDocs) {
+      originComp.exportAgencyDocs.forEach((docName) => {
+        exportAgencyDocsList.push({
+          docName,
+          chapter: originComp.chapter,
+          scope: originComp.scope,
+          hsRange: originComp.hsRange,
+          commodityName: commName,
+          commodityIndex: index + 1,
+        });
+      });
+    }
+
+    const destHs = item.destHsCode || item.hsCode || input.hsCode;
+    const destComp = getHSChapterComplianceFromSchema(destHs, tradeLane);
+    if (destComp && destComp.importAgencyDocs) {
+      destComp.importAgencyDocs.forEach((docName) => {
+        importAgencyDocsList.push({
+          docName,
+          chapter: destComp.chapter,
+          scope: destComp.scope,
+          hsRange: destComp.hsRange,
+          commodityName: commName,
+          commodityIndex: index + 1,
+        });
+      });
+    }
+  });
 
   const stages: RouteStage[] = [];
   let stageCount = 1;
@@ -113,25 +148,25 @@ export const generateShipmentRouteLifecycle = (input: LifecycleEngineInput): Rou
     }));
 
     // Inject HS Chapter compliance documents into the 1st visible stage of the route (e.g. Stage 1 for D2D/D2P, Stage 3 for P2P)
-    if (idx === 0 && hsCompliance && hsCompliance.exportAgencyDocs.length > 0) {
-      hsCompliance.exportAgencyDocs.forEach((docTitle: string) => {
+    if (idx === 0 && exportAgencyDocsList.length > 0) {
+      exportAgencyDocsList.forEach((expDoc) => {
         mappedDocs.push({
-          name: docTitle,
+          name: `${expDoc.docName} (Item #${expDoc.commodityIndex}: ${expDoc.commodityName})`,
           importance: 'mandatory',
-          issuer: `Export Regulatory Agency (HS Ch. ${hsCompliance.chapter})`,
-          description: `Mandatory export document for HS ${hsCompliance.hsRange} (${hsCompliance.scope}).`,
+          issuer: `Export Regulatory Agency (HS Ch. ${expDoc.chapter})`,
+          description: `Mandatory export document for HS ${expDoc.hsRange} (${expDoc.scope}) — Item #${expDoc.commodityIndex}: ${expDoc.commodityName}.`,
         });
       });
     }
 
     // Inject HS Chapter compliance documents as separate individual documents into Stage 4 (Destination Customs)
-    if (s.stage_id === 4 && hsCompliance && hsCompliance.importAgencyDocs.length > 0) {
-      hsCompliance.importAgencyDocs.forEach((docTitle: string) => {
+    if (s.stage_id === 4 && importAgencyDocsList.length > 0) {
+      importAgencyDocsList.forEach((impDoc) => {
         mappedDocs.push({
-          name: docTitle,
+          name: `${impDoc.docName} (Item #${impDoc.commodityIndex}: ${impDoc.commodityName})`,
           importance: 'mandatory',
-          issuer: `Import Regulatory Agency / PGA (HS Ch. ${hsCompliance.chapter})`,
-          description: `Mandatory import clearance permit for HS ${hsCompliance.hsRange} (${hsCompliance.scope}).`,
+          issuer: `Import Regulatory Agency / PGA (HS Ch. ${impDoc.chapter})`,
+          description: `Mandatory import clearance permit for HS ${impDoc.hsRange} (${impDoc.scope}) — Item #${impDoc.commodityIndex}: ${impDoc.commodityName}.`,
         });
       });
     }
@@ -185,9 +220,8 @@ export const generateShipmentRouteLifecycle = (input: LifecycleEngineInput): Rou
       activities: activitiesList,
       documents: mappedDocs,
       milestones,
-      proTip: `Ensure all ${mappedDocs.filter((d) => d.importance === 'mandatory').length} mandatory documents are verified before proceeding past Stage ${s.stage_id}.`,
     });
   });
 
   return stages;
-};
+}

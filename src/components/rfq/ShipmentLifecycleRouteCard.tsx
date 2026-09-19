@@ -36,7 +36,18 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
 }) => {
   const stages = generateShipmentRouteLifecycle(input);
   const tradeLane = resolveTradeLane(input.originPortOrCity, input.destinationPortOrCity);
-  const hsCompliance = getHSChapterComplianceFromSchema(input.hsCode, tradeLane);
+
+  // Extract all HS Chapter compliance records for multi-commodity shipments
+  const commItems = input.commercialItems && input.commercialItems.length > 0
+    ? input.commercialItems
+    : [{ description: 'Cargo Item', hsCode: input.hsCode }];
+
+  const hsComplianceList = commItems
+    .map((item) => {
+      const code = item.originHsCode || item.hsCode || input.hsCode;
+      return getHSChapterComplianceFromSchema(code, tradeLane);
+    })
+    .filter((comp, idx, self) => comp && self.findIndex((c) => c?.chapter === comp.chapter) === idx);
 
   const [expandedStageIds, setExpandedStageIds] = useState<string[]>([]);
   const [filterCategory, setFilterCategory] = useState<'All' | 'Origin' | 'Main Freight' | 'Destination'>('All');
@@ -102,8 +113,9 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
           >
             {tradeLane === 'IN_to_US' ? '🇮🇳 India ➔ 🇺🇸 US (Export)' : '🇺🇸 US ➔ 🇮🇳 India (Import)'}
           </span>
-          {hsCompliance && (
+          {hsComplianceList.map((comp, cIdx) => comp && (
             <span
+              key={cIdx}
               style={{
                 fontSize: '0.68rem',
                 fontWeight: 800,
@@ -114,9 +126,9 @@ export const ShipmentLifecycleRouteCard: React.FC<ShipmentLifecycleRouteCardProp
                 border: '1px solid #e9d5ff',
               }}
             >
-              HS Ch. {hsCompliance.chapter} ({hsCompliance.scope})
+              HS Ch. {comp.chapter} ({comp.scope})
             </span>
-          )}
+          ))}
         </div>
 
         <h3 className="route-banner-title">Interactive Shipment Route & Stage Documentation Map</h3>

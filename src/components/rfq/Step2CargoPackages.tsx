@@ -18,7 +18,7 @@ import {
   calculateVolumetricWeight,
   calculateChargeableWeightKg,
 } from '../../utils/rfqCalculations';
-import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, IndianRupee, Euro, PoundSterling, JapaneseYen, PackageCheck, Layers, Scale, Sparkles, ChevronDown, ChevronUp, Info, TreePine, AlertTriangle, Truck } from 'lucide-react';
+import { Box, Plus, Trash2, FileText, Upload, CheckCircle2, DollarSign, IndianRupee, Euro, PoundSterling, JapaneseYen, PackageCheck, Layers, Scale, Sparkles, Info, TreePine, AlertTriangle, Truck } from 'lucide-react';
 import './Step2CargoPackages.css';
 
 const getCurrencySymbol = (currency: string = 'USD'): string => {
@@ -75,72 +75,93 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
 }) => {
   const [commDocName, setCommDocName] = useState<string>(formData.commercial_docs_name || '');
   const [packDocName, setPackDocName] = useState<string>(formData.packaginglist_docs_name || '');
-  const [showMultiSKU, setShowMultiSKU] = useState<boolean>(formData.commercial_items.length > 1);
   const [activeContainerIndex, setActiveContainerIndex] = useState<number>(0);
 
-  // Gemini AI HS Code Auto-Suggest State
-  const [hsCandidates, setHsCandidates] = useState<GeminiHSCandidate[]>([]);
-  const [isSearchingHS, setIsSearchingHS] = useState<boolean>(false);
-  const [dismissedHsCandidates, setDismissedHsCandidates] = useState<boolean>(false);
+  // Gemini AI HS Code Auto-Suggest State (Per Commodity Card Index)
+  const [hsCandidatesMap, setHsCandidatesMap] = useState<Record<number, GeminiHSCandidate[]>>({});
+  const [isSearchingMap, setIsSearchingMap] = useState<Record<number, boolean>>({});
+  const [dismissedMap, setDismissedMap] = useState<Record<number, boolean>>({});
 
-  // Debounced Gemini AI Lookup when Commodity Description changes
-  useEffect(() => {
-    const query = formData.commodity_description;
-    if (!query || query.trim().length < 3 || dismissedHsCandidates) {
-      setHsCandidates([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsSearchingHS(true);
-      try {
-        const origin = formData.originCountry || formData.from_address?.country || 'India';
-        const dest = formData.destCountry || formData.to_address?.country || 'United States';
-        const candidates = await classifyHSCodeWithGemini(query, origin, dest);
-        if (!dismissedHsCandidates) {
-          setHsCandidates(candidates);
-        }
-      } catch (err) {
-        console.warn('Gemini AI HS Lookup error:', err);
-      } finally {
-        setIsSearchingHS(false);
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [formData.commodity_description, formData.originCountry, formData.destCountry, formData.from_address?.country, formData.to_address?.country, dismissedHsCandidates]);
-
-  // Origin & Destination Country Names & Candidates Partitioning
+  // Country Names
   const originCountryName = formData.originCountry || formData.from_address?.country || 'Origin';
   const destCountryName = formData.destCountry || formData.to_address?.country || 'Destination';
 
-  const originCandidates = hsCandidates.filter((c) =>
-    (c.country_name || '').toLowerCase().includes('export') ||
-    (c.country_name || '').toLowerCase().includes('origin') ||
-    (c.country_name || '').toLowerCase().includes(String(originCountryName).toLowerCase())
-  );
+  // Per-Item Gemini AI Lookup when any Commodity Description changes
+  const descriptionsKey = formData.commercial_items.map((it) => it.description || '').join('||');
 
-  const destCandidates = hsCandidates.filter((c) =>
-    (c.country_name || '').toLowerCase().includes('import') ||
-    (c.country_name || '').toLowerCase().includes('dest') ||
-    (c.country_name || '').toLowerCase().includes(String(destCountryName).toLowerCase())
-  );
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
 
-  const sortCandidatesByConfidence = (list: GeminiHSCandidate[]) => {
-    return [...list].sort((a, b) => (b.confidence ?? 0.85) - (a.confidence ?? 0.85));
+    formData.commercial_items.forEach((item, index) => {
+      const query = item.description;
+      if (!query || query.trim().length < 3 || dismissedMap[index]) {
+        return;
+      }
+
+      const t = setTimeout(async () => {
+        setIsSearchingMap((prev) => ({ ...prev, [index]: true }));
+        try {
+          const origin = formData.originCountry || formData.from_address?.country || 'India';
+          const dest = formData.destCountry || formData.to_address?.country || 'United States';
+          const candidates = await classifyHSCodeWithGemini(query, origin, dest);
+          if (!dismissedMap[index]) {
+            setHsCandidatesMap((prev) => ({ ...prev, [index]: candidates }));
+          }
+        } catch (err) {
+          console.warn(`Gemini AI HS Lookup error for SKU #${index + 1}:`, err);
+        } finally {
+          setIsSearchingMap((prev) => ({ ...prev, [index]: false }));
+        }
+      }, 450);
+
+      timers.push(t);
+    });
+
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+    };
+  }, [
+    descriptionsKey,
+    formData.originCountry,
+    formData.destCountry,
+    formData.from_address?.country,
+    formData.to_address?.country,
+    dismissedMap,
+  ]);
+
+  // Helper to partition candidates into Origin & Destination per card index
+  const getPartitionedCandidatesForIndex = (index: number) => {
+    const candidates = hsCandidatesMap[index] || [];
+    const originCandidates = candidates.filter((c) =>
+      (c.country_name || '').toLowerCase().includes('export') ||
+      (c.country_name || '').toLowerCase().includes('origin') ||
+      (c.country_name || '').toLowerCase().includes(String(originCountryName).toLowerCase())
+    );
+
+    const destCandidates = candidates.filter((c) =>
+      (c.country_name || '').toLowerCase().includes('import') ||
+      (c.country_name || '').toLowerCase().includes('dest') ||
+      (c.country_name || '').toLowerCase().includes(String(destCountryName).toLowerCase())
+    );
+
+    const sortCandidatesByConfidence = (list: GeminiHSCandidate[]) => {
+      return [...list].sort((a, b) => (b.confidence ?? 0.85) - (a.confidence ?? 0.85));
+    };
+
+    const finalOriginCandidates = sortCandidatesByConfidence(
+      originCandidates.length > 0
+        ? originCandidates
+        : candidates.slice(0, Math.ceil(candidates.length / 2))
+    );
+
+    const finalDestCandidates = sortCandidatesByConfidence(
+      destCandidates.length > 0
+        ? destCandidates
+        : candidates.slice(Math.ceil(candidates.length / 2))
+    );
+
+    return { finalOriginCandidates, finalDestCandidates, candidates };
   };
-
-  const finalOriginCandidates = sortCandidatesByConfidence(
-    originCandidates.length > 0
-      ? originCandidates
-      : hsCandidates.slice(0, Math.ceil(hsCandidates.length / 2))
-  );
-
-  const finalDestCandidates = sortCandidatesByConfidence(
-    destCandidates.length > 0
-      ? destCandidates
-      : hsCandidates.slice(Math.ceil(hsCandidates.length / 2))
-  );
 
   // File Upload Handlers
   const handleCommercialDocsUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,51 +184,6 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
       onSetFieldValue('packaginglist_docs_name', file.name);
       setPackDocName(file.name);
     }
-  };
-
-  // Primary Item Sync Helper
-  const primaryItem = formData.commercial_items[0] || {
-    id: 'item-1',
-    description: formData.commodity_description || '',
-    hsCode: formData.hs_code || '',
-    quantity: 1,
-    unitPrice: formData.cargo_value || 0,
-    netWeight: 0,
-  };
-
-  const handlePrimaryItemChange = (field: keyof CommercialItem, value: any) => {
-    const updatedItems = [...formData.commercial_items];
-    if (updatedItems.length === 0) {
-      updatedItems.push({
-        id: 'item-1',
-        description: formData.commodity_description || '',
-        hsCode: formData.hs_code || '',
-        quantity: 1,
-        unitPrice: formData.cargo_value || 0,
-        netWeight: 0,
-      });
-    }
-
-    updatedItems[0] = { ...updatedItems[0], [field]: value };
-
-    // Auto calculate cargo_value if quantity or unitPrice changes
-    if (field === 'quantity' || field === 'unitPrice') {
-      const q = field === 'quantity' ? Number(value) : updatedItems[0].quantity;
-      const p = field === 'unitPrice' ? Number(value) : updatedItems[0].unitPrice;
-      const computedVal = q * p;
-      if (computedVal > 0) {
-        onSetFieldValue('cargo_value', computedVal);
-      }
-    }
-
-    if (field === 'description') {
-      onSetFieldValue('commodity_description', value);
-    }
-    if (field === 'hsCode') {
-      onSetFieldValue('hs_code', value);
-    }
-
-    onSetFieldValue('commercial_items', updatedItems);
   };
 
   // Total Net Cargo Weight = sum across commercial items (quantity * unit net weight)
@@ -263,9 +239,12 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
       id: `item-${Date.now()}`,
       description: '',
       hsCode: formData.hs_code || '',
+      originHsCode: formData.hs_code || '',
+      destHsCode: formData.destination_hs_code || '',
       quantity: 1,
       unitPrice: 0,
       netWeight: 0,
+      totalValue: 0,
     };
     onSetFieldValue('commercial_items', [...formData.commercial_items, newItem]);
   };
@@ -274,12 +253,51 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
     if (formData.commercial_items.length <= 1) return;
     const updated = formData.commercial_items.filter((_, idx) => idx !== index);
     onSetFieldValue('commercial_items', updated);
+
+    if (updated.length > 0) {
+      const sumVal = updated.reduce(
+        (sum, item) => sum + (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
+        0
+      );
+      if (sumVal > 0) {
+        onSetFieldValue('cargo_value', sumVal);
+      }
+    }
   };
 
   const handleUpdateCommercialItem = (index: number, field: keyof CommercialItem, value: any) => {
     const updated = [...formData.commercial_items];
-    updated[index] = { ...updated[index], [field]: value };
+    const item = { ...updated[index], [field]: value };
+
+    // Keep hsCode in sync with originHsCode
+    if (field === 'originHsCode') {
+      item.hsCode = value;
+    }
+
+    if (field === 'quantity' || field === 'unitPrice') {
+      const q = field === 'quantity' ? Number(value) : (item.quantity || 0);
+      const p = field === 'unitPrice' ? Number(value) : (item.unitPrice || 0);
+      item.totalValue = q * p;
+    }
+
+    updated[index] = item;
     onSetFieldValue('commercial_items', updated);
+
+    // Sync primary fields if index === 0
+    if (index === 0) {
+      if (field === 'description') onSetFieldValue('commodity_description', value);
+      if (field === 'originHsCode' || field === 'hsCode') onSetFieldValue('hs_code', value);
+      if (field === 'destHsCode') onSetFieldValue('destination_hs_code', value);
+    }
+
+    // Auto-calculate total cargo commercial value when items change
+    const totalVal = updated.reduce(
+      (sum, it) => sum + (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0),
+      0
+    );
+    if (totalVal > 0) {
+      onSetFieldValue('cargo_value', totalVal);
+    }
   };
 
   const totalPackageCount = formData.packages.reduce((sum, p) => sum + (Number(p.quantity) || 1), 0);
@@ -566,390 +584,402 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
         </div>
       )}
 
-      {/* 2. Commodity, Pricing & Commercial Specifications Card */}
+      {/* 2. Commodity, Pricing & Commercial Specifications Section */}
       <div className="section-card" style={{ marginTop: '1.25rem' }}>
-        <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Layers size={20} className="text-indigo" /> 1. Commodity, Pricing & Commercial Specifications
-        </h3>
-
-        {/* Row 1: Commodity Description & Dual HS Code Selection */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem', marginBottom: '1.15rem' }}>
-          <FormInput
-            label="Commodity Description *"
-            name="commodity_description"
-            value={formData.commodity_description}
-            onChange={(e) => {
-              onSetFieldValue('commodity_description', e.target.value);
-              handlePrimaryItemChange('description', e.target.value);
-              setDismissedHsCandidates(false);
-            }}
-            placeholder="e.g. Green Tea / Precision Industrial Machining Equipment"
-            error={errors.commodity_description}
-            helperText="Descriptive cargo summary used by Gemini AI to classify HS codes"
-          />
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-            <FormInput
-              label={`Origin HS Code (${originCountryName}) *`}
-              name="origin_hs_code"
-              value={formData.origin_hs_code || formData.hs_code || ''}
-              onChange={(e) => {
-                onSetFieldValue('origin_hs_code', e.target.value);
-                onSetFieldValue('hs_code', e.target.value);
-                handlePrimaryItemChange('hsCode', e.target.value);
-              }}
-              placeholder="e.g. 0902.10.10 (ITC-HS Export)"
-              error={errors.origin_hs_code || errors.hs_code}
-              helperText={`Export Schedule Tariff Code for ${originCountryName}`}
-            />
-
-            <FormInput
-              label={`Destination HS Code (${destCountryName}) *`}
-              name="destination_hs_code"
-              value={formData.destination_hs_code || ''}
-              onChange={(e) => {
-                onSetFieldValue('destination_hs_code', e.target.value);
-              }}
-              placeholder="e.g. 0902.10.1000 (HTS Import)"
-              error={errors.destination_hs_code}
-              helperText={`Import Tariff Schedule Code for ${destCountryName}`}
-            />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '1.5px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+          <div>
+            <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+              <Layers size={20} className="text-indigo" /> 1. Commodity, Pricing & Commercial Specifications
+            </h3>
+            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+              Add full commercial, HS tariff, quantity, and valuation details for each SKU/commodity in this shipment.
+            </span>
           </div>
 
-          {/* Gemini AI Country-Aware HS Code Dual Selection Panels */}
-          {isSearchingHS && (
-            <div style={{ fontSize: '0.78rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-              <Sparkles size={14} className="animate-spin" /> Querying Gemini AI Origin & Destination Tariff Classifier...
-            </div>
-          )}
+          <Button type="button" variant="secondary" size="sm" onClick={handleAddCommercialItem} leftIcon={<Plus size={14} />}>
+            + Add Additional Commodity
+          </Button>
+        </div>
 
-          {!isSearchingHS && hsCandidates.length > 0 && !dismissedHsCandidates && (
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <Sparkles size={16} style={{ color: '#2563eb' }} /> Gemini AI Dual Tariff Suggestions (Select for Origin & Destination):
+        {/* Commodity Cards List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {formData.commercial_items.map((item, index) => {
+            const itemTotalVal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+            const { finalOriginCandidates, finalDestCandidates, candidates } = getPartitionedCandidatesForIndex(index);
+            const isSearchingThisCard = !!isSearchingMap[index];
+            const isDismissedThisCard = !!dismissedMap[index];
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  padding: '1.15rem 1.25rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+                }}
+              >
+                {/* Commodity Card Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1d4ed8', background: '#dbeafe', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
+                      COMMODITY #{index + 1}
+                    </span>
+                    {item.description && (
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>
+                        {item.description}
+                      </span>
+                    )}
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
+                      💰 Subtotal: {getCurrencySymbol(formData.currency)} {itemTotalVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCommercialItem(index)}
+                    disabled={formData.commercial_items.length <= 1}
+                    style={{ background: 'none', border: 'none', color: formData.commercial_items.length <= 1 ? '#cbd5e1' : '#ef4444', cursor: formData.commercial_items.length <= 1 ? 'not-allowed' : 'pointer' }}
+                    title="Remove Commodity"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setDismissedHsCandidates(true)}
-                  style={{ fontSize: '0.72rem', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                >
-                  Dismiss Suggestions
-                </button>
+
+                {/* Field 1: Commodity Description */}
+                <FormInput
+                  label={`Commodity Description (SKU #${index + 1}) *`}
+                  name={`commodity_desc_${index}`}
+                  value={item.description}
+                  onChange={(e) => {
+                    handleUpdateCommercialItem(index, 'description', e.target.value);
+                    setDismissedMap((prev) => ({ ...prev, [index]: false }));
+                  }}
+                  placeholder="e.g. Green Tea / Precision Industrial Machining Equipment / Totes"
+                  error={index === 0 ? errors.commodity_description : undefined}
+                  helperText="Detailed commercial description used for customs documentation & tariff classification"
+                />
+
+                {/* Field 2: Dual HS Codes */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <FormInput
+                    label={`Origin HS Code (${originCountryName}) *`}
+                    name={`origin_hs_${index}`}
+                    value={item.originHsCode || item.hsCode || ''}
+                    onChange={(e) => handleUpdateCommercialItem(index, 'originHsCode', e.target.value)}
+                    placeholder="e.g. 0902.10.10 (ITC-HS Export)"
+                    error={index === 0 ? (errors.origin_hs_code || errors.hs_code) : undefined}
+                    helperText={`Export Schedule Tariff Code for ${originCountryName}`}
+                  />
+
+                  <FormInput
+                    label={`Destination HS Code (${destCountryName}) *`}
+                    name={`dest_hs_${index}`}
+                    value={item.destHsCode || ''}
+                    onChange={(e) => handleUpdateCommercialItem(index, 'destHsCode', e.target.value)}
+                    placeholder="e.g. 0902.10.1000 (HTS Import)"
+                    error={index === 0 ? errors.destination_hs_code : undefined}
+                    helperText={`Import Tariff Schedule Code for ${destCountryName}`}
+                  />
+                </div>
+
+                {/* Gemini AI Country-Aware HS Code Dual Selection Panels for Card #index */}
+                {isSearchingThisCard && (
+                  <div style={{ fontSize: '0.78rem', color: '#2563eb', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
+                    <Sparkles size={14} className="animate-spin" /> Querying Gemini AI Origin & Destination Tariff Classifier for SKU #{index + 1}...
+                  </div>
+                )}
+
+                {!isSearchingThisCard && candidates.length > 0 && !isDismissedThisCard && (
+                  <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Sparkles size={16} style={{ color: '#2563eb' }} /> Gemini AI Dual Tariff Suggestions for SKU #{index + 1}:
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDismissedMap((prev) => ({ ...prev, [index]: true }))}
+                        style={{ fontSize: '0.72rem', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Dismiss Suggestions
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                      {/* 🛫 Origin HS Code Suggestions */}
+                      <div style={{ background: '#f0f6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '0.65rem 0.75rem' }}>
+                        <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          🛫 1. Select Origin HS Code ({originCountryName}):
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
+                          {finalOriginCandidates.map((cand, idx) => {
+                            const isSelected = (item.originHsCode === cand.code || item.hsCode === cand.code);
+                            return (
+                              <button
+                                key={`orig-${cand.code}-${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateCommercialItem(index, 'originHsCode', cand.code);
+                                }}
+                                style={{
+                                  background: isSelected ? '#2563eb' : '#ffffff',
+                                  color: isSelected ? '#ffffff' : '#1e293b',
+                                  border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  padding: '0.4rem 0.65rem',
+                                  fontSize: '0.76rem',
+                                  fontWeight: 600,
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.15rem',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.4rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '0.82rem' }}>{cand.code}</span>
+                                    {idx === 0 && (
+                                      <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isSelected ? '#fef08a' : '#fef9c3', color: isSelected ? '#854d0e' : '#a16207', border: '1px solid #fde047', padding: '0.05rem 0.3rem', borderRadius: '3px', textTransform: 'uppercase' }}>
+                                        ★ Top Match
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    <span style={{ fontSize: '0.66rem', fontWeight: 700, background: isSelected ? 'rgba(255,255,255,0.25)' : '#dbeafe', color: isSelected ? '#ffffff' : '#1d4ed8', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
+                                      {cand.country_name || 'Export Schedule'}
+                                    </span>
+                                    {cand.confidence !== undefined && (
+                                      <span style={{ fontSize: '0.64rem', fontWeight: 800, background: isSelected ? 'rgba(255,255,255,0.2)' : '#e0f2fe', color: isSelected ? '#ffffff' : '#0369a1', padding: '0.05rem 0.3rem', borderRadius: '3px' }}>
+                                        {Math.round(cand.confidence * 100)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.7rem', opacity: isSelected ? 0.95 : 0.8, lineHeight: 1.25 }}>{cand.description}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 🛬 Destination HS Code Suggestions */}
+                      <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '0.65rem 0.75rem' }}>
+                        <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          🛬 2. Select Destination HS Code ({destCountryName}):
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
+                          {finalDestCandidates.map((cand, idx) => {
+                            const isSelected = item.destHsCode === cand.code;
+                            return (
+                              <button
+                                key={`dest-${cand.code}-${idx}`}
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateCommercialItem(index, 'destHsCode', cand.code);
+                                }}
+                                style={{
+                                  background: isSelected ? '#7e22ce' : '#ffffff',
+                                  color: isSelected ? '#ffffff' : '#1e293b',
+                                  border: isSelected ? '1.5px solid #7e22ce' : '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  padding: '0.4rem 0.65rem',
+                                  fontSize: '0.76rem',
+                                  fontWeight: 600,
+                                  textAlign: 'left',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '0.15rem',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.4rem' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                    <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '0.82rem' }}>{cand.code}</span>
+                                    {idx === 0 && (
+                                      <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isSelected ? '#fef08a' : '#fef9c3', color: isSelected ? '#854d0e' : '#a16207', border: '1px solid #fde047', padding: '0.05rem 0.3rem', borderRadius: '3px', textTransform: 'uppercase' }}>
+                                        ★ Top Match
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                    <span style={{ fontSize: '0.66rem', fontWeight: 700, background: isSelected ? 'rgba(255,255,255,0.25)' : '#f3e8ff', color: isSelected ? '#ffffff' : '#7e22ce', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
+                                      {cand.country_name || 'Import Tariff'}
+                                    </span>
+                                    {cand.confidence !== undefined && (
+                                      <span style={{ fontSize: '0.64rem', fontWeight: 800, background: isSelected ? 'rgba(255,255,255,0.2)' : '#f3e8ff', color: isSelected ? '#ffffff' : '#6b21a8', padding: '0.05rem 0.3rem', borderRadius: '3px' }}>
+                                        {Math.round(cand.confidence * 100)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.7rem', opacity: isSelected ? 0.95 : 0.8, lineHeight: 1.25 }}>{cand.description}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Field 3: Quantity, Unit Price & Net Weight per Unit */}
+                <div className="grid-3col" style={{ gap: '1.25rem' }}>
+                  <FormInput
+                    type="number"
+                    min={1}
+                    label="Quantity (Units) *"
+                    name={`qty_${index}`}
+                    value={item.quantity || ''}
+                    onChange={(e) => handleUpdateCommercialItem(index, 'quantity', e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
+                    error={index === 0 ? errors.primary_item_qty : undefined}
+                    helperText="Item unit count for this commodity"
+                  />
+
+                  <FormInput
+                    type="number"
+                    min={0}
+                    label={`Unit Price (${getCurrencySymbol(formData.currency)}) *`}
+                    name={`unit_price_${index}`}
+                    value={item.unitPrice || ''}
+                    onChange={(e) => handleUpdateCommercialItem(index, 'unitPrice', e.target.value === '' ? '' : Number(e.target.value))}
+                    error={index === 0 ? errors.primary_item_unit_price : undefined}
+                    icon={getCurrencyIconNode(formData.currency)}
+                    helperText={`Price per unit in ${formData.currency || 'USD'}`}
+                  />
+
+                  <FormInput
+                    type="number"
+                    min={0}
+                    label="Net Weight / Unit (kg) *"
+                    name={`net_weight_${index}`}
+                    value={item.netWeight || ''}
+                    onChange={(e) => handleUpdateCommercialItem(index, 'netWeight', e.target.value === '' ? '' : Number(e.target.value))}
+                    error={index === 0 ? errors.primary_item_net_weight : undefined}
+                    icon={<Scale size={16} />}
+                    helperText="Net weight per unit (excl. packaging)"
+                  />
+                </div>
+
+                {/* Field 4: Total Commercial Value for this Commodity & Currency */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <FormInput
+                    type="number"
+                    label={`Commercial Value (${getCurrencySymbol(formData.currency)}) *`}
+                    name={`commercial_value_${index}`}
+                    value={itemTotalVal || ''}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? 0 : Number(e.target.value);
+                      if (item.quantity && item.quantity > 0) {
+                        handleUpdateCommercialItem(index, 'unitPrice', val / item.quantity);
+                      }
+                    }}
+                    icon={getCurrencyIconNode(formData.currency)}
+                    helperText="Subtotal value for this commodity (Auto-calculated: Qty × Unit Price)"
+                  />
+
+                  {index === 0 ? (
+                    <FormSelect
+                      label="Shipment Currency *"
+                      name="currency"
+                      value={formData.currency || 'USD'}
+                      onChange={(e) => onSetFieldValue('currency', e.target.value)}
+                      options={[
+                        { value: 'USD', label: 'USD - US Dollar ($)' },
+                        { value: 'INR', label: 'INR - Indian Rupee (₹)' },
+                        { value: 'EUR', label: 'EUR - Euro (€)' },
+                        { value: 'GBP', label: 'GBP - British Pound (£)' },
+                        { value: 'AED', label: 'AED - UAE Dirham (AED)' },
+                        { value: 'SGD', label: 'SGD - Singapore Dollar (S$)' },
+                        { value: 'CAD', label: 'CAD - Canadian Dollar (C$)' },
+                        { value: 'AUD', label: 'AUD - Australian Dollar (A$)' },
+                        { value: 'JPY', label: 'JPY - Japanese Yen (¥)' },
+                        { value: 'CNY', label: 'CNY - Chinese Yuan (¥)' },
+                      ]}
+                      error={errors.currency}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem' }}>Currency</span>
+                      <div style={{ padding: '0.55rem 0.75rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
+                        {formData.currency || 'USD'} ({getCurrencySymbol(formData.currency)})
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                {/* 🛫 Origin HS Code Suggestions */}
-                <div style={{ background: '#f0f6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '0.65rem 0.75rem' }}>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    🛫 1. Select Origin HS Code ({originCountryName}):
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
-                    {finalOriginCandidates.map((cand, idx) => {
-                      const isSelected = (formData.origin_hs_code === cand.code || formData.hs_code === cand.code);
-                      return (
-                        <button
-                          key={`orig-${cand.code}-${idx}`}
-                          type="button"
-                          onClick={() => {
-                            onSetFieldValue('origin_hs_code', cand.code);
-                            onSetFieldValue('hs_code', cand.code);
-                            handlePrimaryItemChange('hsCode', cand.code);
-                          }}
-                          style={{
-                            background: isSelected ? '#2563eb' : '#ffffff',
-                            color: isSelected ? '#ffffff' : '#1e293b',
-                            border: isSelected ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '0.4rem 0.65rem',
-                            fontSize: '0.76rem',
-                            fontWeight: 600,
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.15rem',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.4rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '0.82rem' }}>{cand.code}</span>
-                              {idx === 0 && (
-                                <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isSelected ? '#fef08a' : '#fef9c3', color: isSelected ? '#854d0e' : '#a16207', border: '1px solid #fde047', padding: '0.05rem 0.3rem', borderRadius: '3px', textTransform: 'uppercase' }}>
-                                  ★ Top Match
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                              <span style={{ fontSize: '0.66rem', fontWeight: 700, background: isSelected ? 'rgba(255,255,255,0.25)' : '#dbeafe', color: isSelected ? '#ffffff' : '#1d4ed8', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
-                                {cand.country_name || 'Export Schedule'}
-                              </span>
-                              {cand.confidence !== undefined && (
-                                <span style={{ fontSize: '0.64rem', fontWeight: 800, background: isSelected ? 'rgba(255,255,255,0.2)' : '#e0f2fe', color: isSelected ? '#ffffff' : '#0369a1', padding: '0.05rem 0.3rem', borderRadius: '3px' }}>
-                                  {Math.round(cand.confidence * 100)}%
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <span style={{ fontSize: '0.7rem', opacity: isSelected ? 0.95 : 0.8, lineHeight: 1.25 }}>{cand.description}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 🛬 Destination HS Code Suggestions */}
-                <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '0.65rem 0.75rem' }}>
-                  <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    🛬 2. Select Destination HS Code ({destCountryName}):
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
-                    {finalDestCandidates.map((cand, idx) => {
-                      const isSelected = formData.destination_hs_code === cand.code;
-                      return (
-                        <button
-                          key={`dest-${cand.code}-${idx}`}
-                          type="button"
-                          onClick={() => {
-                            onSetFieldValue('destination_hs_code', cand.code);
-                          }}
-                          style={{
-                            background: isSelected ? '#7e22ce' : '#ffffff',
-                            color: isSelected ? '#ffffff' : '#1e293b',
-                            border: isSelected ? '1.5px solid #7e22ce' : '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            padding: '0.4rem 0.65rem',
-                            fontSize: '0.76rem',
-                            fontWeight: 600,
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.15rem',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.4rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                              <span style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: '0.82rem' }}>{cand.code}</span>
-                              {idx === 0 && (
-                                <span style={{ fontSize: '0.6rem', fontWeight: 800, background: isSelected ? '#fef08a' : '#fef9c3', color: isSelected ? '#854d0e' : '#a16207', border: '1px solid #fde047', padding: '0.05rem 0.3rem', borderRadius: '3px', textTransform: 'uppercase' }}>
-                                  ★ Top Match
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                              <span style={{ fontSize: '0.66rem', fontWeight: 700, background: isSelected ? 'rgba(255,255,255,0.25)' : '#f3e8ff', color: isSelected ? '#ffffff' : '#7e22ce', padding: '0.05rem 0.35rem', borderRadius: '3px' }}>
-                                {cand.country_name || 'Import Tariff'}
-                              </span>
-                              {cand.confidence !== undefined && (
-                                <span style={{ fontSize: '0.64rem', fontWeight: 800, background: isSelected ? 'rgba(255,255,255,0.2)' : '#f3e8ff', color: isSelected ? '#ffffff' : '#6b21a8', padding: '0.05rem 0.3rem', borderRadius: '3px' }}>
-                                  {Math.round(cand.confidence * 100)}%
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <span style={{ fontSize: '0.7rem', opacity: isSelected ? 0.95 : 0.8, lineHeight: 1.25 }}>{cand.description}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            );
+          })}
         </div>
 
-        {/* Row 2: Quantity, Unit Price & Net Weight per Unit */}
-        <div className="grid-3col" style={{ gap: '1.25rem', marginBottom: '1.15rem' }}>
-          <FormInput
-            type="number"
-            min={1}
-            label="Quantity (Units) *"
-            name="primary_item_qty"
-            value={primaryItem.quantity || ''}
-            onChange={(e) => handlePrimaryItemChange('quantity', e.target.value === '' ? '' : Math.max(1, Number(e.target.value)))}
-            error={errors.primary_item_qty}
-            helperText="Item unit count"
-          />
+        {/* Add Commodity Action & Total Commercial Summary Banner */}
+        <div
+          style={{
+            marginTop: '1.25rem',
+            paddingTop: '1rem',
+            borderTop: '1.5px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <Button type="button" variant="secondary" size="sm" onClick={handleAddCommercialItem} leftIcon={<Plus size={14} />}>
+            + Add Additional Commodity
+          </Button>
 
-          <FormInput
-            type="number"
-            min={0}
-            label={`Unit Price (${getCurrencySymbol(formData.currency)}) *`}
-            name="primary_item_unit_price"
-            value={primaryItem.unitPrice || ''}
-            onChange={(e) => handlePrimaryItemChange('unitPrice', e.target.value === '' ? '' : Number(e.target.value))}
-            error={errors.primary_item_unit_price}
-            icon={getCurrencyIconNode(formData.currency)}
-            helperText={`Price per individual unit in ${formData.currency || 'USD'}`}
-          />
-
-          <FormInput
-            type="number"
-            min={0}
-            label="Net Weight / Unit (kg) *"
-            name="primary_item_net_weight"
-            value={primaryItem.netWeight || ''}
-            onChange={(e) => handlePrimaryItemChange('netWeight', e.target.value === '' ? '' : Number(e.target.value))}
-            error={errors.primary_item_net_weight}
-            icon={<Scale size={16} />}
-            helperText="Net weight per individual unit (excl. packaging)"
-          />
-        </div>
-
-        {/* Row 3: Total Cargo Commercial Value, Currency & Load Type */}
-        <div className="grid-3col" style={{ gap: '1.25rem' }}>
-          <FormInput
-            type="number"
-            label={`Total Commercial Value (${getCurrencySymbol(formData.currency)}) *`}
-            name="cargo_value"
-            value={formData.cargo_value || ''}
-            onChange={(e) => onSetFieldValue('cargo_value', e.target.value === '' ? '' : Number(e.target.value))}
-            error={errors.cargo_value}
-            icon={getCurrencyIconNode(formData.currency)}
-            helperText="Total invoice valuation (Auto-calculated: Qty × Unit Price)"
-          />
-
-          <FormSelect
-            label="Currency *"
-            name="currency"
-            value={formData.currency || 'USD'}
-            onChange={(e) => onSetFieldValue('currency', e.target.value)}
-            options={[
-              { value: 'USD', label: 'USD - US Dollar ($)' },
-              { value: 'INR', label: 'INR - Indian Rupee (₹)' },
-              { value: 'EUR', label: 'EUR - Euro (€)' },
-              { value: 'GBP', label: 'GBP - British Pound (£)' },
-              { value: 'AED', label: 'AED - UAE Dirham (AED)' },
-              { value: 'SGD', label: 'SGD - Singapore Dollar (S$)' },
-              { value: 'CAD', label: 'CAD - Canadian Dollar (C$)' },
-              { value: 'AUD', label: 'AUD - Australian Dollar (A$)' },
-              { value: 'JPY', label: 'JPY - Japanese Yen (¥)' },
-              { value: 'CNY', label: 'CNY - Chinese Yuan (¥)' },
-            ]}
-            error={errors.currency}
-          />
-        </div>
-
-        {/* Optional Multi-SKU Expander */}
-        <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.825rem', color: '#64748b', fontWeight: 500 }}>
-            Shipping multiple distinct commercial SKUs in this shipment?
-          </span>
-          <button
-            type="button"
-            onClick={() => setShowMultiSKU(!showMultiSKU)}
+          <div
             style={{
-              background: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              padding: '0.45rem 0.85rem',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              color: '#1e293b',
-              cursor: 'pointer',
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+              border: '1.5px solid #bae6fd',
+              borderRadius: '10px',
+              padding: '0.65rem 1rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.4rem',
-              transition: 'all 0.2s ease',
+              gap: '1.25rem',
             }}
           >
-            {showMultiSKU ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            {showMultiSKU ? 'Hide Multi-SKU Itemized Table' : '+ Expand Multi-SKU Itemized Breakdown'}
-          </button>
-        </div>
-
-        {/* Multi-SKU Itemized Table (Expandable on demand) */}
-        {showMultiSKU && (
-          <div style={{ marginTop: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0f172a' }}>
-                Itemized Commercial Breakdown ({formData.commercial_items.length} SKUs)
+            <div>
+              <span style={{ fontSize: '0.68rem', color: '#0369a1', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
+                Total Commodities
               </span>
-              <Button type="button" variant="secondary" size="sm" onClick={handleAddCommercialItem} leftIcon={<Plus size={14} />}>
-                Add Additional SKU
-              </Button>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                {formData.commercial_items.length} SKUs
+              </span>
             </div>
 
-            <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', background: '#ffffff' }}>
-                <thead>
-                  <tr style={{ background: '#1e293b', color: '#ffffff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    <th style={{ padding: '0.75rem 1rem' }}>SKU Description</th>
-                    <th style={{ padding: '0.75rem 0.75rem', width: '130px' }}>HS Code</th>
-                    <th style={{ padding: '0.75rem 0.75rem', width: '90px', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '0.75rem 0.75rem', width: '140px' }}>Unit Price ({getCurrencySymbol(formData.currency)})</th>
-                    <th style={{ padding: '0.75rem 0.75rem', width: '140px' }}>Net Wt/Unit (kg)</th>
-                    <th style={{ padding: '0.75rem 0.75rem', width: '60px', textAlign: 'center' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formData.commercial_items.map((item, index) => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0', background: index % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                      <td style={{ padding: '0.6rem 0.75rem' }}>
-                        <input
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => handleUpdateCommercialItem(index, 'description', e.target.value)}
-                          style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.875rem' }}
-                        />
-                      </td>
-                      <td style={{ padding: '0.6rem 0.5rem' }}>
-                        <input
-                          type="text"
-                          value={item.hsCode || ''}
-                          onChange={(e) => handleUpdateCommercialItem(index, 'hsCode', e.target.value)}
-                          style={{ width: '100%', padding: '0.5rem 0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.875rem' }}
-                        />
-                      </td>
-                      <td style={{ padding: '0.6rem 0.5rem' }}>
-                        <input
-                          type="number"
-                          min={1}
-                          value={item.quantity || ''}
-                          onChange={(e) => handleUpdateCommercialItem(index, 'quantity', e.target.value === '' ? '' : Number(e.target.value))}
-                          style={{ width: '100%', padding: '0.5rem 0.5rem', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', fontSize: '0.875rem' }}
-                        />
-                      </td>
-                      <td style={{ padding: '0.6rem 0.5rem' }}>
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.unitPrice || ''}
-                          onChange={(e) => handleUpdateCommercialItem(index, 'unitPrice', e.target.value === '' ? '' : Number(e.target.value))}
-                          style={{ width: '100%', padding: '0.5rem 0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.875rem' }}
-                        />
-                      </td>
-                      <td style={{ padding: '0.6rem 0.5rem' }}>
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.netWeight || ''}
-                          onChange={(e) => handleUpdateCommercialItem(index, 'netWeight', e.target.value === '' ? '' : Number(e.target.value))}
-                          style={{ width: '100%', padding: '0.5rem 0.6rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.875rem' }}
-                        />
-                      </td>
-                      <td style={{ padding: '0.6rem 0.5rem', textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCommercialItem(index)}
-                          disabled={formData.commercial_items.length <= 1}
-                          style={{ background: 'none', border: 'none', color: formData.commercial_items.length <= 1 ? '#cbd5e1' : '#ef4444', cursor: formData.commercial_items.length <= 1 ? 'not-allowed' : 'pointer', padding: '0.35rem' }}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ height: '24px', width: '1px', background: '#93c5fd' }} />
+
+            <div>
+              <span style={{ fontSize: '0.68rem', color: '#0369a1', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
+                Total Net Cargo Weight
+              </span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a' }}>
+                {totalNetCargoWeight.toLocaleString()} kg
+              </span>
+            </div>
+
+            <div style={{ height: '24px', width: '1px', background: '#93c5fd' }} />
+
+            <div>
+              <span style={{ fontSize: '0.68rem', color: '#0369a1', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
+                Total Commercial Valuation
+              </span>
+              <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0284c7' }}>
+                {getCurrencySymbol(formData.currency)} {formData.commercial_items.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* 3. Package Dimensions, Gross Weight & Weight Breakdown Section */}
@@ -1087,10 +1117,15 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1d4ed8', background: '#dbeafe', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
                       PACKAGE LINE #{index + 1}
                     </span>
+                    {pkg.associatedSkuId && (
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6d28d9', background: '#f3e8ff', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
+                        🏷️ SKU: {formData.commercial_items.find((it) => it.id === pkg.associatedSkuId)?.description || 'Linked Commodity'}
+                      </span>
+                    )}
                     <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0891b2', background: '#ecfeff', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
                       📦 Vol: {volCbm.toFixed(2)} CBM
                     </span>
@@ -1108,6 +1143,45 @@ export const Step2CargoPackages: React.FC<Step2CargoPackagesProps> = ({
                     <Trash2 size={18} />
                   </button>
                 </div>
+
+                {/* Associated Commodity Dropdown for Package Line */}
+                {formData.commercial_items.length > 1 && (
+                  <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>
+                      Associated Commodity:
+                    </span>
+                    <select
+                      value={pkg.associatedSkuId || ''}
+                      onChange={(e) => {
+                        const skuId = e.target.value;
+                        const targetSku = formData.commercial_items.find((it) => it.id === skuId);
+                        const updatedPkgs = [...formData.packages];
+                        updatedPkgs[index] = {
+                          ...updatedPkgs[index],
+                          associatedSkuId: skuId,
+                          packedItemDescriptions: targetSku && targetSku.description ? [targetSku.description] : [formData.commodity_description || 'General Cargo'],
+                        };
+                        if (targetSku && targetSku.quantity > 0) {
+                          if (!updatedPkgs[index].quantity || updatedPkgs[index].quantity === 1) {
+                            updatedPkgs[index].quantity = targetSku.quantity;
+                          }
+                          if (!updatedPkgs[index].grossWeight && targetSku.netWeight > 0) {
+                            updatedPkgs[index].grossWeight = targetSku.netWeight;
+                          }
+                        }
+                        onSetFieldValue('packages', updatedPkgs);
+                      }}
+                      style={{ flex: 1, padding: '0.4rem 0.65rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.825rem', color: '#0f172a', background: '#ffffff', fontWeight: 600 }}
+                    >
+                      <option value="">All Commodities / Mixed Package Cargo</option>
+                      {formData.commercial_items.map((it, i) => (
+                        <option key={it.id} value={it.id}>
+                          SKU #{i + 1}: {it.description || `Item ${i + 1}`} ({it.quantity || 1} units, {it.netWeight || 0} kg/unit)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
                   <div>

@@ -107,6 +107,10 @@ export const RFQFormFlow: React.FC = () => {
   const subPayload = isSubmitted && submittedRecord ? (submittedRecord.payload as any) : null;
   const routeCardInput = subPayload
     ? {
+        origin: displayFrom || displayOrigin,
+        destination: displayTo || displayDest,
+        mode: subPayload.mode === 'Air' ? 'Air' : 'Ship',
+        scope: subPayload.service_scope || 'D2D',
         transportMode: (subPayload.mode === 'Air' ? 'Air' : 'Ship') as 'Air' | 'Ship',
         serviceType: (subPayload.service_scope === 'D2D'
           ? 'Door-to-Door'
@@ -121,8 +125,13 @@ export const RFQFormFlow: React.FC = () => {
         isReefer: Boolean(subPayload.temperature_control_required),
         incoterm: subPayload.incoterm || 'DDP',
         hsCode: subPayload.hs_code || subPayload.hsCode || '',
+        commercialItems: subPayload.commercial_items,
       }
     : {
+        origin: fromAddrLabel || originPortLabel,
+        destination: toAddrLabel || destPortLabel,
+        mode: formData.mode === 'Air' ? 'Air' : 'Ship',
+        scope: formData.service_scope || 'D2D',
         transportMode: (formData.mode === 'Air' ? 'Air' : 'Ship') as 'Air' | 'Ship',
         serviceType: (formData.service_scope === 'D2D'
           ? 'Door-to-Door'
@@ -137,6 +146,7 @@ export const RFQFormFlow: React.FC = () => {
         isReefer: Boolean(formData.temperature_control_required),
         incoterm: formData.incoterm || 'DDP',
         hsCode: formData.hs_code || (formData as any).hsCode || '',
+        commercialItems: formData.commercial_items,
       };
 
   return (

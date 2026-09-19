@@ -37,9 +37,12 @@ export interface CommercialItem {
   id: string;
   description: string;
   hsCode?: string;
+  originHsCode?: string;
+  destHsCode?: string;
   quantity: number;
   unitPrice: number;
   netWeight: number;
+  totalValue?: number;
 }
 
 export interface PackageCard {
@@ -53,6 +56,7 @@ export interface PackageCard {
   grossWeight: number;
   isStackable: boolean;
   packedItemDescriptions: string[];
+  associatedSkuId?: string;
 }
 
 export interface RFQFormData {
@@ -151,6 +155,8 @@ export interface RFQSubmissionPayload {
   container_type?: string;
   container_count?: number;
   hs_code?: string;
+  origin_hs_code?: string;
+  destination_hs_code?: string;
   commodity_description?: string;
   total_volume_cbm: number;
   total_gross_weight_kg: number;
