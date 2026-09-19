@@ -1,6 +1,7 @@
 import {
   getStageDocumentsFromSchema,
   getHSChapterComplianceFromSchema,
+  getSpecialServiceDocumentsFromSchema,
   resolveTradeLane,
 } from './cargoDocService';
 
@@ -81,7 +82,7 @@ export const generateShipmentRouteLifecycle = (input: LifecycleEngineInput): Rou
   // Filter stage groups visible for selected scope
   const visibleSchemaStages = schemaStages.filter((st) => st.visible_scopes.includes(scopeCode));
 
-  visibleSchemaStages.forEach((s) => {
+  visibleSchemaStages.forEach((s, idx) => {
     let iconType: RouteStage['iconType'] = 'file-text';
     let category: RouteStage['category'] = 'Origin';
 
@@ -111,8 +112,8 @@ export const generateShipmentRouteLifecycle = (input: LifecycleEngineInput): Rou
       description: doc.description,
     }));
 
-    // Inject HS Chapter compliance documents as separate individual documents into Stage 1 (Origin)
-    if (s.stage_id === 1 && hsCompliance && hsCompliance.exportAgencyDocs.length > 0) {
+    // Inject HS Chapter compliance documents into the 1st visible stage of the route (e.g. Stage 1 for D2D/D2P, Stage 3 for P2P)
+    if (idx === 0 && hsCompliance && hsCompliance.exportAgencyDocs.length > 0) {
       hsCompliance.exportAgencyDocs.forEach((docTitle: string) => {
         mappedDocs.push({
           name: docTitle,
@@ -135,22 +136,30 @@ export const generateShipmentRouteLifecycle = (input: LifecycleEngineInput): Rou
       });
     }
 
-    // Inject Hazmat & Reefer special documents from Cargo Doc.json specs
+    // Inject Hazmat & Reefer special documents directly from Cargo Doc.json specs
     if (isReefer && s.stage_id === 1) {
-      mappedDocs.push({
-        name: 'Cold Chain Temperature Setting Instructions',
-        importance: 'mandatory',
-        issuer: 'Shipper / Cold Chain Operator',
-        description: 'Explicit temperature setpoint and vent setting for reefer container provided to terminal.',
+      const reeferSchemaDocs = getSpecialServiceDocumentsFromSchema('reefer');
+      reeferSchemaDocs.forEach((doc) => {
+        mappedDocs.push({
+          name: doc.name,
+          importance: doc.importance === 'mandatory' ? 'mandatory' : 'conditional',
+          issuer: doc.issuer,
+          recipient: doc.recipient,
+          description: doc.description,
+        });
       });
     }
 
     if (isHazmat && (s.stage_id === 2 || s.stage_id === 4)) {
-      mappedDocs.push({
-        name: 'IMO Hazmat Approval & Terminal DG Gate Pass',
-        importance: 'mandatory',
-        issuer: 'Port Authority / IMO Safety Officer',
-        description: 'Dangerous Goods terminal entry approval required before hazmat container gate-in.',
+      const hazmatSchemaDocs = getSpecialServiceDocumentsFromSchema('hazmat');
+      hazmatSchemaDocs.forEach((doc) => {
+        mappedDocs.push({
+          name: doc.name,
+          importance: doc.importance === 'mandatory' ? 'mandatory' : 'conditional',
+          issuer: doc.issuer,
+          recipient: doc.recipient,
+          description: doc.description,
+        });
       });
     }
 

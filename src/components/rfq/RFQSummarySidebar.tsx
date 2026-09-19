@@ -27,6 +27,8 @@ interface RFQSummarySidebarProps {
   itemReconciliationPassed?: boolean;
 }
 
+import encargoChargesData from '../../assets/Encargo_charges.json';
+
 export interface StageCharge {
   category: string;
   stage: 'Origin' | 'Main Freight' | 'Destination';
@@ -39,61 +41,77 @@ export interface StageCharge {
 export const getStageCharges = (
   stageId: string,
   mode: string = 'Ship',
-  serviceScope: string = 'D2D'
+  serviceScope: string = 'D2D',
+  loadType: string = 'FCL',
+  loadingType?: string
 ): StageCharge[] => {
-  const ALL = ['D2D', 'D2P', 'P2P', 'P2D'];
-  const ORIGIN_DOOR = ['D2D', 'D2P'];
-  const DEST_DOOR = ['D2D', 'P2D'];
+  const scope = (serviceScope || 'D2D').toUpperCase();
+  const transportMode = mode.toLowerCase() === 'air' ? 'Air' : 'Ocean';
+  const isLiveLoading = Boolean(
+    loadingType && String(loadingType).toLowerCase().includes('live')
+  );
 
-  let charges: StageCharge[] = [];
+  const highLevel = encargoChargesData.high_level_charges;
+  let rawList: Array<{
+    applicableScopes: string;
+    category: string;
+    stage: string;
+    chargeName: string;
+    mode: string[];
+    notes: string;
+  }> = [];
 
-  switch (stageId) {
-    case 'origin':
-      charges = [
-        { applicableScopes: ORIGIN_DOOR, category: 'First Mile / Transport', stage: 'Origin', chargeName: 'Factory Pickup / Carting', amount: 180, notes: 'Transport of cargo/container from shipper premises to CFS or port terminal' },
-        { applicableScopes: ORIGIN_DOOR, category: 'Packaging & Warehousing', stage: 'Origin', chargeName: 'CFS Handling & Stuffing', amount: 210, notes: 'Cargo handling, palletization, shrink-wrapping, stuffing & labor at origin CFS' },
-        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Clearance', stage: 'Origin', chargeName: 'Export Customs Brokerage (CHA)', amount: 150, notes: 'Professional export customs broker agency service fee' },
-        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Clearance', stage: 'Origin', chargeName: 'Shipping Bill Filing & Processing', amount: 65, notes: 'Electronic filing, checklist generation & ICEGATE EDI processing fee' },
-        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Compliance', stage: 'Origin', chargeName: 'Customs Examination & Scanning Fee', amount: 90, notes: 'Physical container inspection, X-ray scanning, open examination & officer fees' },
-        { applicableScopes: ORIGIN_DOOR, category: 'Customs & Compliance', stage: 'Origin', chargeName: 'Certificate & Regulatory Documentation', amount: 45, notes: 'Issuance of Certificate of Origin (COO), legalization, fumigation & export permits' },
-        { applicableScopes: ALL, category: 'Terminal & Port', stage: 'Origin', chargeName: 'Origin Terminal Handling Charges (OTHC)', amount: 250, notes: 'Container handling, yard movement & vessel loading fees at origin port' },
-        { applicableScopes: ALL, category: 'Terminal & Port', stage: 'Origin', chargeName: 'Verified Gross Mass (VGM) Charges', amount: 25, notes: 'SOLAS weighbridge certification, electronic data submission & admin fee' },
-        { applicableScopes: ALL, category: 'Terminal & Port', stage: 'Origin', chargeName: 'Seal & Equipment Maintenance', amount: 15, notes: 'High-security ISO container seal fee and container pre-trip washing/cleaning' },
-        { applicableScopes: ALL, category: 'Documentation', stage: 'Origin', chargeName: 'Bill of Lading (B/L) Issuance Fee', amount: 50, notes: 'Carrier documentation issuance, electronic manifest transmission & drafting' },
-        { applicableScopes: ALL, category: 'Documentation & Admin', stage: 'Origin', chargeName: 'B/L & Manifest Amendment Fee', amount: 35, notes: 'Corrections, revisions, or destination changes after manifest closure' },
-      ];
-      break;
-
-    case 'freight':
-      charges = [
-        { applicableScopes: ALL, category: 'Freight & Transit', stage: 'Main Freight', chargeName: mode === 'Air' ? 'Air Freight (OF)' : 'Ocean Freight (OF)', amount: 1450, notes: 'Basic ocean/air carriage charge from origin port of loading to destination port' },
-        { applicableScopes: ALL, category: 'Freight & Transit', stage: 'Main Freight', chargeName: 'Bunker & Currency Adjustments (BAF / CAF / LSS)', amount: 220, notes: 'Fuel price fluctuation (BAF), low-sulfur fuel compliance (LSS) & currency adjustment (CAF)' },
-        { applicableScopes: ALL, category: 'Freight & Transit', stage: 'Main Freight', chargeName: 'Trade Lane Surcharges (PSS / GRI / EIS / PCS)', amount: 150, notes: 'Peak season (PSS), general rate increases (GRI), equipment imbalance (EIS) & congestion (PCS)' },
-        { applicableScopes: ALL, category: 'Customs & Compliance', stage: 'Main Freight', chargeName: 'Security & Advance Manifest Filing (AMS / ISF / ENS)', amount: 60, notes: 'Regulatory electronic filing fees to destination customs (e.g., US AMS/ISF, EU ENS)' },
-      ];
-      break;
-
-    case 'destination':
-      charges = [
-        { applicableScopes: ALL, category: 'Port & Terminal', stage: 'Destination', chargeName: 'Destination THC (DTHC)', amount: 310, notes: 'Vessel discharging, gantry crane handling & container staging at destination port' },
-        { applicableScopes: ALL, category: 'Port & Terminal', stage: 'Destination', chargeName: 'Delivery Order (D/O) Fee', amount: 85, notes: 'Shipping line document issuance fee authorizing port/CFS cargo release' },
-        { applicableScopes: ALL, category: 'Port & Terminal', stage: 'Destination', chargeName: 'Port Facility & Security Dues (ISPS / Port Dues)', amount: 45, notes: 'Terminal security compliance (ISPS), channel dues & port infrastructure fees' },
-        { applicableScopes: DEST_DOOR, category: 'Customs & Clearance', stage: 'Destination', chargeName: 'Import Customs Brokerage', amount: 175, notes: 'Destination customs clearance services, tariff classification & representation' },
-        { applicableScopes: DEST_DOOR, category: 'Customs & Clearance', stage: 'Destination', chargeName: 'Bill of Entry / Import Declaration', amount: 70, notes: 'Formal electronic customs entry declaration filing fee' },
-        { applicableScopes: DEST_DOOR, category: 'Customs & Compliance', stage: 'Destination', chargeName: 'Import Customs Inspection & Examination', amount: 120, notes: 'Physical destuffing, customs examination, X-ray scanning & sampling at destination CFS' },
-        { applicableScopes: DEST_DOOR, category: 'Customs & Compliance', stage: 'Destination', chargeName: 'Customs Bond & In-Bond Transfer', amount: 65, notes: 'Bond execution and carrier in-bond transit filing for inland movement' },
-        { applicableScopes: DEST_DOOR, category: 'Statutory Charges', stage: 'Destination', chargeName: 'Customs Duty, Taxes & Statutory Surcharges', amount: 850, notes: 'Government import customs duty, IGST/VAT, anti-dumping duty & statutory surcharges' },
-        { applicableScopes: DEST_DOOR, category: 'Last Mile / Transport', stage: 'Destination', chargeName: 'Destination Delivery / Trucking Charges', amount: 240, notes: 'Transport from destination port/CFS to buyer warehouse or final destination' },
-        { applicableScopes: DEST_DOOR, category: 'Last Mile / Transport', stage: 'Destination', chargeName: 'Chassis Rental / Usage Fee', amount: 90, notes: 'Dedicated trailer chassis usage fee for container drayage delivery (common in North America)' },
-        { applicableScopes: ALL, category: 'Contingent Charges', stage: 'Destination', chargeName: 'Demurrage & Detention (D&D)', amount: 0, notes: 'Penalties for container equipment usage (Detention) and port storage (Demurrage) exceeding free days' },
-      ];
-      break;
-
-    default:
-      charges = [];
+  if (stageId === 'origin') {
+    rawList = highLevel.origin as typeof rawList;
+  } else if (stageId === 'freight') {
+    rawList = highLevel.freight as typeof rawList;
+  } else if (stageId === 'destination') {
+    rawList = highLevel.destination as typeof rawList;
   }
 
-  return charges.filter((c) => !c.applicableScopes || c.applicableScopes.includes(serviceScope));
+  // Filter raw list by scope, mode, and loadType
+  const filtered = rawList.filter((item) => {
+    // Mode filter check
+    if (item.mode && item.mode.length > 0) {
+      const modeMatches = item.mode.some((m) => {
+        const mLower = m.toLowerCase();
+        if (mLower === transportMode.toLowerCase()) return true;
+        if (mLower === 'road' || mLower === 'rail') {
+          return scope === 'D2D' || scope === 'D2P' || scope === 'P2D';
+        }
+        return false;
+      });
+      if (!modeMatches) return false;
+    }
+
+    // Live Loading constraint: If loadingType is live loading, 1st mile origin door charges are not needed
+    if (isLiveLoading && item.applicableScopes === 'ORIGIN_DOOR') {
+      return false;
+    }
+
+    // Scope filter check
+    if (item.applicableScopes === 'ORIGIN_DOOR') {
+      if (scope !== 'D2D' && scope !== 'D2P') return false;
+    } else if (item.applicableScopes === 'DEST_DOOR') {
+      if (scope !== 'D2D' && scope !== 'P2D') return false;
+    }
+
+    // LCL Consolidation Charges filter condition
+    if (item.chargeName === 'LCL Consolidation Charges' || item.chargeName.includes('LCL Consolidation')) {
+      if (loadType !== 'LCL') return false;
+    }
+
+    return true;
+  });
+
+  return filtered.map((item, idx) => ({
+    category: item.category,
+    stage: (item.stage === 'Origin' ? 'Origin' : item.stage === 'Main Freight' ? 'Main Freight' : 'Destination'),
+    chargeName: item.chargeName === 'Freight Charges (Ocean / Air)' ? (transportMode === 'Air' ? 'Air Freight (AF)' : 'Ocean Freight (OF)') : item.chargeName,
+    amount: Math.round(50 + (idx % 6) * 35),
+    notes: item.notes,
+    applicableScopes: [item.applicableScopes],
+  }));
 };
 
 export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
@@ -238,7 +256,7 @@ export const RFQSummarySidebar: React.FC<RFQSummarySidebarProps> = ({
         {filteredStages.map((stage, idx) => {
           const isExpanded = expandedStageIds.includes(stage.id);
           const isLast = idx === filteredStages.length - 1;
-          const stageCharges = getStageCharges(stage.id, formData.mode, formData.service_scope || 'D2D');
+          const stageCharges = getStageCharges(stage.id, formData.mode, formData.service_scope || 'D2D', formData.load_type || 'FCL', formData.loading_type);
 
           return (
             <div

@@ -40,7 +40,7 @@ export const RFQFormFlow: React.FC = () => {
   } = useRFQForm();
 
   const [descriptionInput, setDescriptionInput] = useState<string>(
-    'Hi, i want to transport 15 box of carrots from Chennai, India to Simivally, US, which the boxs are 90*20*100 h*w*l respectively. Want FCL only with 20ft Reefer container, DDP incoterm, need insurance coverage and customs clearance.'
+    'Hi, i want to transport 15 boxes of fresh carrots from Chennai, India to Simi Valley, US. Package size 100x20x90 cm (L x W x H), gross weight 18kg per box. Requires refrigerated temperature control at 4°C, DDP incoterm, declared cargo value $25,000, need full insurance coverage and customs clearance.'
   );
   const [isParsingAI, setIsParsingAI] = useState<boolean>(false);
   const [selectedStageIndex, setSelectedStageIndex] = useState<number>(0);
@@ -384,7 +384,7 @@ export const RFQFormFlow: React.FC = () => {
                       type="button"
                       onClick={() =>
                         setDescriptionInput(
-                          'Hi, i want to transport 15 box of carrots from Chennai, India to Simivally, US, which the boxs are 90*20*100 h*w*l respectively. Want FCL only with 20ft Reefer container, DDP incoterm, need insurance coverage and customs clearance.'
+                          'Hi, i want to transport 15 boxes of fresh carrots from Chennai, India to Simi Valley, US. Package size 100x20x90 cm (L x W x H), gross weight 18kg per box. Requires refrigerated temperature control at 4°C, DDP incoterm, declared cargo value $25,000, need full insurance coverage and customs clearance.'
                         )
                       }
                       style={{
@@ -398,13 +398,13 @@ export const RFQFormFlow: React.FC = () => {
                         fontWeight: 600,
                       }}
                     >
-                      🥕 15 Boxes Carrots (FCL 20ft Reefer, Chennai → US, DDP + Insured)
+                      🥕 15 Boxes Fresh Carrots (Temp Controlled 4°C, Chennai → US, DDP + Insured)
                     </button>
                     <button
                       type="button"
                       onClick={() =>
                         setDescriptionInput(
-                          'Need to ship 20 wooden pallets of apparel textiles from Hamburg, Germany to New York, US. Package size 120x80x160 cm, gross weight 250kg per pallet. FOB incoterm, cargo value $50,000, need customs clearance.'
+                          'Need to ship 20 wooden pallets of apparel textiles from Hamburg, Germany to New York, US. Package size 120x80x160 cm, gross weight 250kg per pallet. FOB incoterm, declared cargo value $50,000. Stackable packaging, target delivery within 18 days, requires import customs clearance.'
                         )
                       }
                       style={{
@@ -424,7 +424,7 @@ export const RFQFormFlow: React.FC = () => {
                       type="button"
                       onClick={() =>
                         setDescriptionInput(
-                          'Air freight express request for 5 crates of electronic sensors from Tokyo, Japan to Chennai, India. Dimensions 40x30x25 cm, 15kg each, CIF incoterm, cargo value $12,500, need full insurance.'
+                          'Air freight express request for 5 crates of precision electronic sensors from Tokyo, Japan to Chennai, India. Dimensions 40x30x25 cm, gross weight 15kg each, CIF incoterm, declared cargo value $12,500. Fragile electronic equipment, express delivery within 3 days, full insurance coverage required.'
                         )
                       }
                       style={{
@@ -438,7 +438,7 @@ export const RFQFormFlow: React.FC = () => {
                         fontWeight: 600,
                       }}
                     >
-                      ✈️ Air Freight 5 Crates Sensors (Tokyo → Chennai, CIF + Insured)
+                      ✈️ Air Express 5 Crates Sensors (Tokyo → Chennai, CIF + Insured)
                     </button>
                   </div>
                 </div>

@@ -147,6 +147,7 @@ export interface RFQSubmissionPayload {
   incoterm: string;
   unit_system: UnitSystem;
   load_type: LoadType;
+  loading_type?: string;
   container_type?: string;
   container_count?: number;
   hs_code?: string;

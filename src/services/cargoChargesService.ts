@@ -46,7 +46,7 @@ export const getStageCategoryGroupsFromSchema = (
     allowedCategories = ['First Mile / Transport'];
   } else if (stageId === 2) {
     // 2. Origin Port Handling & Export Customs
-    // Categories: Packaging & Warehousing, Customs & Clearance, Customs & Compliance, Terminal & Port, Documentation & Admin, Contingent Charges
+    // Categories: Packaging & Warehousing, Customs & Clearance, Customs & Compliance, Terminal & Port, Documentation & Admin, Statutory Charges, Contingent Charges
     rawList = detailed.origin;
     allowedCategories = [
       'Packaging & Warehousing',
@@ -54,6 +54,7 @@ export const getStageCategoryGroupsFromSchema = (
       'Customs & Compliance',
       'Terminal & Port',
       'Documentation & Admin',
+      'Statutory Charges',
       'Contingent Charges',
     ];
   } else if (stageId === 3) {
@@ -104,8 +105,17 @@ export const getStageCategoryGroupsFromSchema = (
     allowedCategories = ['Statutory Charges'];
   }
 
-  // Filter raw list by scope and mode
+  const loadType = p.load_type || (p as any).loadType || 'FCL';
+
+  // Filter raw list by scope, mode, and load_type
   const scopeFiltered = rawList.filter((item) => {
+    // LCL Consolidation Charges must only be shown if AI recommendation / load_type is LCL
+    if (item.chargeName === 'LCL Consolidation Charges' || item.chargeName.includes('LCL Consolidation')) {
+      if (loadType !== 'LCL') {
+        return false;
+      }
+    }
+
     if (item.applicableScopes === 'ORIGIN_DOOR') {
       return scope === 'D2D' || scope === 'D2P';
     }

@@ -66,6 +66,7 @@ const INITIAL_FORM_DATA: RFQFormData = {
   delivery_date: getMinDeliveryDate(getMinReadyDate(), 'Ship'),
 
   load_type: 'LCL',
+  loading_type: '',
   container_type: '',
   container_count: 1,
 

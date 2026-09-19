@@ -62,14 +62,19 @@ export const generateDynamicPostSubmissionStages = (
     return docs;
   };
 
+  const isLiveLoading = Boolean(
+    p.loading_type && String(p.loading_type).toLowerCase().includes('live')
+  );
+
   // 1. First Mile Trucking (Stage 1 in Cargo Doc.json & Encargo_charges.json)
-  if (scope === 'D2D' || scope === 'D2P' || Boolean(p.from_address)) {
+  if (scope === 'D2D' || scope === 'D2P') {
     const stage1Extra: string[] = [];
     if (hsCompliance && hsCompliance.exportAgencyDocs.length > 0) {
       stage1Extra.push(...hsCompliance.exportAgencyDocs);
     }
     if (p.has_wood_packaging || p.crating_service_required) {
-      stage1Extra.push('ISPM-15 Wood Packing Phytosanitary Certificate');
+      const fumiDocs = getSpecialServiceDocumentsFromSchema('fumigation');
+      stage1Extra.push(...fumiDocs.map((d) => d.name));
     }
 
     stages.push({
@@ -78,16 +83,17 @@ export const generateDynamicPostSubmissionStages = (
       category: 'first_mile',
       locationInfo: `${originText} → ${originPortText}`,
       iconType: 'truck',
-      quotes: generateSchemaQuotesForStage(1, record, 'First Mile Trucking'),
+      quotes: isLiveLoading ? [] : generateSchemaQuotesForStage(1, record, 'First Mile Trucking'),
       documents: buildStageDocumentsFromSchema(1, stage1Extra),
     });
   }
 
   // 2. Origin Port Handling & Export Customs (Stage 2 in Cargo Doc.json & Encargo_charges.json)
-  if (scope !== 'P2P' || p.origin_customs_clearance) {
+  if (scope === 'D2D' || scope === 'D2P' || scope === 'P2D' || p.origin_customs_clearance) {
     const stage2Extra: string[] = [];
     if (p.hazardous_materials) {
-      stage2Extra.push('Dangerous Goods Declaration (DGD / IMO)', 'Material Safety Data Sheet (MSDS)');
+      const hazDocs = getSpecialServiceDocumentsFromSchema('hazmat');
+      stage2Extra.push(...hazDocs.map((d) => d.name));
     }
 
     stages.push({
@@ -108,7 +114,8 @@ export const generateDynamicPostSubmissionStages = (
 
   const stage3Extra: string[] = [];
   if (p.temperature_control_required) {
-    stage3Extra.push('Reefer Temperature Log Report & PTI Certificate');
+    const reeferDocs = getSpecialServiceDocumentsFromSchema('reefer');
+    stage3Extra.push(...reeferDocs.map((d) => d.name));
   }
 
   stages.push({
@@ -122,7 +129,7 @@ export const generateDynamicPostSubmissionStages = (
   });
 
   // 4. Destination Customs & Import Clearance (Stage 4 in Cargo Doc.json & Encargo_charges.json)
-  if (scope === 'D2D' || scope === 'P2D' || p.destination_customs_clearance) {
+  if (scope === 'D2D' || scope === 'P2D' || scope === 'P2P' || p.destination_customs_clearance) {
     const stage4Extra: string[] = [];
     if (hsCompliance && hsCompliance.importAgencyDocs.length > 0) {
       stage4Extra.push(...hsCompliance.importAgencyDocs);
@@ -140,7 +147,7 @@ export const generateDynamicPostSubmissionStages = (
   }
 
   // 5. Last Mile Delivery – Trucking (Stage 5 in Cargo Doc.json & Encargo_charges.json)
-  if (scope === 'D2D' || scope === 'P2D' || Boolean(p.to_address)) {
+  if (scope === 'D2D' || scope === 'P2D') {
     stages.push({
       id: 'stage-last-mile',
       stageName: 'Last Mile – Truck Delivery',
@@ -173,6 +180,24 @@ export const generateDynamicPostSubmissionStages = (
       quotes: generateSchemaQuotesForStage(6, record, 'Marine Insurance'),
       documents: insuranceDocs,
     });
+  }
+
+  // Ensure export HS compliance documents are attached to the first stage of the route (e.g. for P2P/P2D)
+  if (hsCompliance && hsCompliance.exportAgencyDocs.length > 0 && stages.length > 0) {
+    const hasExportDocs = stages.some((st) =>
+      st.documents.some((d) => hsCompliance.exportAgencyDocs.includes(d.name))
+    );
+    if (!hasExportDocs) {
+      const firstStage = stages[0];
+      hsCompliance.exportAgencyDocs.forEach((docName, idx) => {
+        firstStage.documents.push({
+          id: `doc-${firstStage.id}-hs-exp-${idx + 1}`,
+          name: docName,
+          description: `HS Chapter ${hsCompliance.chapter} (${hsCompliance.scope}) mandatory export requirement from Cargo Doc.json.`,
+          status: 'pending',
+        });
+      });
+    }
   }
 
   return stages;

@@ -45,7 +45,7 @@ export const Step3CommoditySpecialization: React.FC<Step3CommoditySpecialization
   ];
 
   const showFclLoadingType =
-    formData.mode === 'Ship' && formData.load_type === 'FCL' && formData.service_scope === 'D2D';
+    formData.mode === 'Ship' && (formData.service_scope === 'D2D' || formData.service_scope === 'D2P');
 
   return (
     <div className="step3-container animate-fade-in">

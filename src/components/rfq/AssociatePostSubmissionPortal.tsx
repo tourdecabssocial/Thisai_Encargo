@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
-import type { SubmittedRFQRecord } from '../../types/rfq';
+import type { SubmittedRFQRecord, CurrencyType } from '../../types/rfq';
 import type { ShipmentStage, StageQuote, CategoryQuote, MarkupType, DocumentStatus, ChargeItemGroupBundle } from '../../types/postSubmission';
 import { generateDynamicPostSubmissionStages } from '../../utils/postSubmissionGenerator';
+
+const getCurrencySymbol = (curr?: CurrencyType | string): string => {
+  switch (curr) {
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    case 'INR': return '₹';
+    case 'USD':
+    default: return '$';
+  }
+};
 import { RFQSubmissionReport } from './RFQSubmissionReport';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
@@ -88,6 +98,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
     baseRate: string;
     markupValue: string;
     markupType: MarkupType;
+    currency: CurrencyType;
     transitTime: string;
     validUntil: string;
     notes: string;
@@ -99,6 +110,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
     baseRate: '',
     markupValue: '0',
     markupType: 'flat',
+    currency: (record.payload.currency as CurrencyType) || 'USD',
     transitTime: '1-2 Days',
     validUntil: '2026-11-30',
     notes: '',
@@ -213,45 +225,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
     );
   };
 
-  const handleToggleCategoryRateMode = (stageId: string, categoryName: string, mode: 'category_lump' | 'itemized_charge' | 'grouped_sets') => {
-    setStages((prevStages) =>
-      prevStages.map((stage) => {
-        if (stage.id !== stageId) return stage;
 
-        const updatedQuotes = stage.quotes.map((quote) => {
-          if (!quote.categoryGroups) return quote;
-
-          const updatedGroups = quote.categoryGroups.map((group) => {
-            if (group.categoryName !== categoryName) return group;
-
-            const updatedCatQuotes = group.categoryQuotes.map((cq) => {
-              if (!cq.isSelected) return cq;
-              return {
-                ...cq,
-                rateMode: mode,
-              };
-            });
-
-            return {
-              ...group,
-              categoryQuotes: updatedCatQuotes,
-            };
-          });
-
-          return {
-            ...quote,
-            categoryGroups: updatedGroups,
-          };
-        });
-
-        return {
-          ...stage,
-          quotes: updatedQuotes,
-        };
-      })
-    );
-    setToastMessage(`Rate mode set to ${mode === 'itemized_charge' ? 'ChargeName-Wise' : 'Category-Wise'} for ${categoryName}`);
-  };
 
   const handleUpdateLineItemRate = (
     stageId: string,
@@ -358,21 +332,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
   };
 
   // --- Quote Operations ---
-  const handleSelectQuote = (stageId: string, quoteId: string) => {
-    setStages((prevStages) =>
-      prevStages.map((stage) => {
-        if (stage.id !== stageId) return stage;
-        return {
-          ...stage,
-          quotes: stage.quotes.map((q) => ({
-            ...q,
-            isSelected: q.id === quoteId,
-          })),
-        };
-      })
-    );
-    setToastMessage('Selected active quote for stage updated!');
-  };
+
 
 
 
@@ -393,7 +353,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
             const updatedGroups = quote.categoryGroups.map((group) => ({
               ...group,
               lineItems: group.lineItems.map((item) => {
-                if (item.id !== lineItemId) return item;
+                if (item.id !== lineItemId || !item.quotes) return item;
 
                 const updatedItemQuotes = item.quotes.map((iq) => {
                   if (iq.id !== itemQuoteId) return iq;
@@ -411,7 +371,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                 const activeQ = updatedItemQuotes.find((q) => q.isSelected) || updatedItemQuotes[0];
                 return {
                   ...item,
-                  selectedRate: activeQ.finalRate,
+                  selectedRate: activeQ ? activeQ.finalRate : item.selectedRate,
                   quotes: updatedItemQuotes,
                 };
               }),
@@ -421,8 +381,9 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
               (grpSum, grp) =>
                 grpSum +
                 grp.lineItems.reduce((itemSum, item) => {
-                  const activeQ = item.quotes.find((q) => q.isSelected) || item.quotes[0];
-                  return itemSum + activeQ.finalRate;
+                  const itemQuotes = item.quotes || [];
+                  const activeQ = itemQuotes.find((q) => q.isSelected) || itemQuotes[0];
+                  return itemSum + (activeQ ? activeQ.finalRate : 0);
                 }, 0),
               0
             );
@@ -483,6 +444,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
         providerName: newQuoteForm.providerName || 'Vendor 3rd Party Rate',
         baseRate: baseNum,
         markupValue: calcMarkup,
+        currency: newQuoteForm.currency,
         finalRate: final,
         isSelected: false,
         rateMode: newQuoteForm.rateMode,
@@ -522,6 +484,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
         baseRate: '',
         markupValue: '0',
         markupType: 'flat',
+        currency: (record.payload.currency as CurrencyType) || 'USD',
         transitTime: '1-2 Days',
         validUntil: '2026-11-30',
         notes: '',
@@ -565,6 +528,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
       baseRate: '',
       markupValue: '0',
       markupType: 'flat',
+      currency: (record.payload.currency as CurrencyType) || 'USD',
       transitTime: '1-2 Days',
       validUntil: '2026-11-30',
       notes: '',
@@ -825,6 +789,13 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
               {/* TAB 1: QUOTE MANAGEMENT (Category-Level Rate Selection) */}
               {activeSubtab === 'quotes' && (() => {
                 const selectedQuote = stage.quotes.find((q) => q.isSelected) || stage.quotes[0];
+                const isLiveLoading = Boolean(
+                  record.payload.loading_type &&
+                  String(record.payload.loading_type).toLowerCase().includes('live')
+                );
+                const isFirstMileStage = stage.category === 'first_mile' || stage.id === 'stage-first-mile';
+                const isLiveLoadingPitchBlocked = isLiveLoading && isFirstMileStage;
+
                 return (
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', borderBottom: '2px solid #e2e8f0', paddingBottom: '0.65rem' }}>
@@ -839,11 +810,40 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                       </div>
                     </div>
 
+                    {/* Live Loading Active Constraint Banner */}
+                    {isLiveLoadingPitchBlocked && (
+                      <div
+                        style={{
+                          background: 'linear-gradient(135deg, #fffbe0 0%, #fef3c7 100%)',
+                          border: '1.5px solid #f59e0b',
+                          borderRadius: '10px',
+                          padding: '0.9rem 1.15rem',
+                          marginBottom: '1.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.85rem',
+                          boxShadow: '0 2px 8px rgba(245, 158, 11, 0.1)',
+                        }}
+                      >
+                        <div style={{ background: '#d97706', color: '#ffffff', padding: '0.55rem', borderRadius: '8px', display: 'flex' }}>
+                          <Truck size={20} />
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#92400e', display: 'block' }}>
+                            ⚡ Live Factory Loading Active — 1st Mile Pitching Disabled
+                          </span>
+                          <span style={{ fontSize: '0.78rem', color: '#b45309', fontWeight: 600 }}>
+                            This shipment uses Live Loading at the factory. Container pickup is integrated directly into factory drayage; standalone 1st Mile vendor quote pitching is bypassed.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {selectedQuote && selectedQuote.categoryGroups && selectedQuote.categoryGroups.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         {selectedQuote.categoryGroups.map((group) => {
                           const selectedCategoryQuote = (group.categoryQuotes && group.categoryQuotes.find((cq) => cq.isSelected)) || (group.categoryQuotes && group.categoryQuotes[0]);
-                          const categorySubtotal = selectedCategoryQuote ? selectedCategoryQuote.finalRate : 0;
+                          const categorySubtotal = isLiveLoadingPitchBlocked ? 0 : (selectedCategoryQuote ? selectedCategoryQuote.finalRate : 0);
 
                           return (
                             <div
@@ -884,40 +884,45 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                                       ${categorySubtotal.toLocaleString()}
                                     </span>
                                   </div>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                                    onClick={() => {
-                                      setAddingQuoteStageId(stage.id);
-                                      setAddingQuoteCategoryName(group.categoryName);
-                                      const initialItemized: Record<string, number> = {};
-                                      group.lineItems.forEach((li) => {
-                                        initialItemized[li.id] = li.selectedRate || 0;
-                                      });
-                                      const totalSum = Object.values(initialItemized).reduce((a, b) => a + b, 0);
-                                      setNewQuoteForm({
-                                        providerName: '',
-                                        baseRate: totalSum > 0 ? String(totalSum) : '',
-                                        markupValue: '0',
-                                        markupType: 'flat',
-                                        transitTime: '1-2 Days',
-                                        validUntil: '2026-11-30',
-                                        notes: '',
-                                        rateMode: 'category_lump',
-                                        itemizedAmounts: initialItemized,
-                                        bundles: [],
-                                      });
-                                    }}
-                                    leftIcon={<Plus size={13} />}
-                                  >
-                                    Add Vendor Rate
-                                  </Button>
+                                  {isLiveLoadingPitchBlocked ? (
+                                    <Badge variant="warning">⚡ Pitching Bypassed (Live Loading)</Badge>
+                                  ) : (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                                      onClick={() => {
+                                        setAddingQuoteStageId(stage.id);
+                                        setAddingQuoteCategoryName(group.categoryName);
+                                        const initialItemized: Record<string, number> = {};
+                                        group.lineItems.forEach((li) => {
+                                          initialItemized[li.id] = li.selectedRate || 0;
+                                        });
+                                        const totalSum = Object.values(initialItemized).reduce((a, b) => a + b, 0);
+                                        setNewQuoteForm({
+                                          providerName: '',
+                                          baseRate: totalSum > 0 ? String(totalSum) : '',
+                                          markupValue: '0',
+                                          markupType: 'flat',
+                                          currency: (record.payload.currency as CurrencyType) || 'USD',
+                                          transitTime: '1-2 Days',
+                                          validUntil: '2026-11-30',
+                                          notes: '',
+                                          rateMode: 'category_lump',
+                                          itemizedAmounts: initialItemized,
+                                          bundles: [],
+                                        });
+                                      }}
+                                      leftIcon={<Plus size={13} />}
+                                    >
+                                      Add Vendor Rate
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
 
                               {/* Pitched Category Vendor Quote Cards & Right-Side Selected Quote Configurator */}
-                              {group.categoryQuotes && group.categoryQuotes.length > 0 && (
+                              {!isLiveLoadingPitchBlocked && group.categoryQuotes && group.categoryQuotes.length > 0 && (
                                 <div style={{ marginBottom: '1rem' }}>
                                   <span style={{ fontSize: '0.725rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '0.5rem' }}>
                                     Pitched Vendor Rates for Category:
@@ -1136,15 +1141,38 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                                           </h5>
                                           <p style={{ margin: 0, fontSize: '0.675rem', color: '#64748b', maxWidth: '180px' }}>
                                             Click "Select" on a card to configure rate & markup.
-                                          </p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
+                                           </p>
+                                         </div>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
+                               )}
 
-                              {/* Viewed Category Quote Breakdown Section (Toggled via View Details) */}
+                               {isLiveLoadingPitchBlocked && (
+                                 <div
+                                   style={{
+                                     padding: '0.85rem 1.15rem',
+                                     background: '#f8fafc',
+                                     borderRadius: '10px',
+                                     border: '1px dashed #cbd5e1',
+                                     fontSize: '0.82rem',
+                                     color: '#475569',
+                                     display: 'flex',
+                                     alignItems: 'center',
+                                     justifyContent: 'space-between',
+                                     marginTop: '0.5rem',
+                                   }}
+                                 >
+                                   <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                     <Truck size={16} style={{ color: '#d97706' }} />
+                                     Container is loaded live at origin factory. Standalone 1st Mile vendor rates are not quoted.
+                                   </span>
+                                   <Badge variant="warning">$0 (Included in Factory Freight)</Badge>
+                                 </div>
+                               )}
+
+                               {/* Viewed Category Quote Breakdown Section (Toggled via View Details) */}
                               {(() => {
                                 const viewedCategoryQuote = group.categoryQuotes.find((q) => expandedCategoryQuotes[q.id]);
                                 if (!viewedCategoryQuote) return null;
@@ -1447,16 +1475,32 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
               </div>
 
               <form onSubmit={handleCreateQuote}>
-                <div className="form-group-row">
-                  <label className="form-group-label">Provider / Carrier Name *</label>
-                  <input
-                    type="text"
-                    className="form-group-input"
-                    placeholder="e.g. DHL Express / FastTrack Logistics"
-                    value={newQuoteForm.providerName}
-                    onChange={(e) => setNewQuoteForm({ ...newQuoteForm, providerName: e.target.value })}
-                    required
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group-row">
+                    <label className="form-group-label">Provider / Carrier Name *</label>
+                    <input
+                      type="text"
+                      className="form-group-input"
+                      placeholder="e.g. DHL Express / FastTrack Logistics"
+                      value={newQuoteForm.providerName}
+                      onChange={(e) => setNewQuoteForm({ ...newQuoteForm, providerName: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group-row">
+                    <label className="form-group-label">Quote Currency *</label>
+                    <select
+                      className="form-group-input"
+                      value={newQuoteForm.currency}
+                      onChange={(e) => setNewQuoteForm({ ...newQuoteForm, currency: e.target.value as CurrencyType })}
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="INR">INR (₹)</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Rate Entry Mode Selector */}
@@ -1541,7 +1585,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                         Individual Charge Item Rates for {addingQuoteCategoryName}:
                       </span>
                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#15803d', background: '#dcfce7', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
-                        Fetched Base Rate: ${newQuoteForm.baseRate || 0}
+                        Fetched Base Rate: {getCurrencySymbol(newQuoteForm.currency)}{newQuoteForm.baseRate || 0}
                       </span>
                     </div>
 
@@ -1554,7 +1598,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                               {li.chargeName}
                             </span>
                             <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', border: '1px solid #94a3b8', borderRadius: '4px', padding: '0.1rem 0.3rem' }}>
-                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>$</span>
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>{getCurrencySymbol(newQuoteForm.currency)}</span>
                               <input
                                 type="number"
                                 min="0"
@@ -1590,7 +1634,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                         Combine Charges into Sets (Group of 2, 3, etc.):
                       </span>
                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#7e22ce', background: '#f3e8ff', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
-                        Fetched Base Rate: ${newQuoteForm.baseRate || 0}
+                        Fetched Base Rate: {getCurrencySymbol(newQuoteForm.currency)}{newQuoteForm.baseRate || 0}
                       </span>
                     </div>
 
@@ -1605,7 +1649,7 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                               </span>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', background: '#f3e8ff', border: '1px solid #a855f7', borderRadius: '4px', padding: '0.1rem 0.35rem' }}>
-                                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7e22ce' }}>$</span>
+                                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#7e22ce' }}>{getCurrencySymbol(newQuoteForm.currency)}</span>
                                   <input
                                     type="number"
                                     min="0"
@@ -1773,7 +1817,9 @@ export const AssociatePostSubmissionPortal: React.FC<AssociatePostSubmissionPort
                 {/* MODE 3: CATEGORY LUMP-SUM BASE RATE */}
                 {newQuoteForm.rateMode === 'category_lump' && (
                   <div className="form-group-row">
-                    <label className="form-group-label">Category Base Rate Amount ($ USD) *</label>
+                    <label className="form-group-label">
+                      Category Base Rate Amount ({getCurrencySymbol(newQuoteForm.currency)} {newQuoteForm.currency}) *
+                    </label>
                     <input
                       type="number"
                       className="form-group-input"

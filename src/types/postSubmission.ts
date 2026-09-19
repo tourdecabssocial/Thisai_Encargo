@@ -1,4 +1,4 @@
-import type { SubmittedRFQRecord } from './rfq';
+import type { SubmittedRFQRecord, CurrencyType } from './rfq';
 
 export type QuoteType = 'third_party' | 'thisai';
 export type MarkupType = 'flat' | 'percent';
@@ -39,6 +39,7 @@ export interface CategoryQuote {
   baseRate: number;
   markupValue: number;
   markupType?: MarkupType;
+  currency?: CurrencyType;
   finalRate: number;
   isSelected: boolean;
   transitTime?: string;

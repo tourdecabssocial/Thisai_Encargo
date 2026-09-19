@@ -1,5 +1,5 @@
 import { mockAddresses } from '../hooks/useRFQForm';
-import type { RFQFormData } from '../types/rfq';
+import type { RFQFormData, CurrencyType } from '../types/rfq';
 import {
   SYSTEM_PROMPT_SHIPMENT_DESCRIPTION_PARSER,
   buildDescriptionParserUserPrompt,
@@ -103,6 +103,8 @@ export const parseShipmentDescriptionWithAI = async (
 
 /**
  * Sanitizes and normalizes raw AI LLM responses into strict RFQFormData partial state.
+ * STRICT POLICY: NO STATIC FALLBACKS OR FAKE NUMBERS.
+ * Unstated or unextracted fields remain null, 0, or undefined for clean manual entry.
  */
 function sanitizeAndNormalizeAIFields(
   aiResponse: Record<string, any>,
@@ -112,61 +114,88 @@ function sanitizeAndNormalizeAIFields(
   const extractedList: string[] = [];
   const textLower = rawDescription.toLowerCase();
 
-  // Mode
-  updates.mode = (aiResponse.mode === 'Air' || textLower.includes('air')) ? 'Air' : 'Ship';
-  extractedList.push(`Transport Mode: ${updates.mode === 'Air' ? 'Air Freight' : 'Ocean Freight'}`);
-
-  // Load Type & Container Specs
-  const isFCL = aiResponse.load_type === 'FCL' || /fcl|full container|20ft|40ft/i.test(textLower);
-  if (isFCL) {
-    updates.load_type = 'FCL';
-    updates.container_type = aiResponse.container_type || (/reefer|carrot|cold|frozen/i.test(textLower) ? '20RF' : '20GP');
-    updates.container_count = Number(aiResponse.container_count) || 1;
-    extractedList.push(`Load Type: FCL (${updates.container_type} Container)`);
-  } else {
-    updates.load_type = 'LCL';
-    extractedList.push('Load Type: LCL (Loose Cargo)');
+  // 1. Transport Mode (Only set if explicitly indicated)
+  if (aiResponse.mode === 'Air' || /\b(air|flight|express)\b/i.test(textLower)) {
+    updates.mode = 'Air';
+    extractedList.push('Transport Mode: Air Freight');
+  } else if (aiResponse.mode === 'Ship' || /\b(ship|ocean|sea|vessel|port|maritime)\b/i.test(textLower)) {
+    updates.mode = 'Ship';
+    extractedList.push('Transport Mode: Ocean Freight');
   }
 
-  // Origin Location
+  // 2. Load Type & Container Allocation (Only set if explicitly specified by customer)
+  if (aiResponse.load_type === 'FCL' || /\b(fcl|full container)\b/i.test(textLower)) {
+    updates.load_type = 'FCL';
+    if (aiResponse.container_type) updates.container_type = String(aiResponse.container_type);
+    if (aiResponse.container_count) updates.container_count = Number(aiResponse.container_count);
+    extractedList.push(`Load Type: FCL${updates.container_type ? ` (${updates.container_type})` : ''}`);
+  } else if (aiResponse.load_type === 'LCL' || /\b(lcl|loose cargo|consolidation)\b/i.test(textLower)) {
+    updates.load_type = 'LCL';
+    extractedList.push('Load Type: LCL');
+  }
+
+  // 2b. Factory Loading Strategy (Live Loading vs CFS vs Fumigation)
+  if (
+    aiResponse.loading_type === 'live_loading' ||
+    /\b(live\s*loading|live\s*load|factory\s*loading|loading\s*at\s*factory|direct\s*factory)\b/i.test(textLower)
+  ) {
+    updates.loading_type = 'live_loading';
+    extractedList.push('Loading Strategy: Live Loading at Factory');
+  } else if (
+    aiResponse.loading_type === 'cfs_loading' ||
+    /\b(cfs|container freight station)\b/i.test(textLower)
+  ) {
+    updates.loading_type = 'cfs_loading';
+    extractedList.push('Loading Strategy: CFS Loading');
+  } else if (
+    aiResponse.loading_type === 'fumigation' ||
+    /\b(fumigation|treated loading)\b/i.test(textLower)
+  ) {
+    updates.loading_type = 'fumigation';
+    extractedList.push('Loading Strategy: Fumigation & Treated Loading');
+  }
+
+  // 3. Origin Location (Only set if detected in text or returned by AI)
   if (aiResponse.from_address_id && mockAddresses.some(a => a.id === aiResponse.from_address_id)) {
     updates.from_address_id = aiResponse.from_address_id;
-    updates.from_address = mockAddresses.find(a => a.id === aiResponse.from_address_id) || mockAddresses[0];
-    updates.originCountry = updates.from_address.countryCode || 'IN';
-    extractedList.push(`Origin: ${updates.from_address.city}, ${updates.from_address.country}`);
-  } else if (/chennai|india/i.test(textLower)) {
+    updates.from_address = mockAddresses.find(a => a.id === aiResponse.from_address_id);
+    if (updates.from_address?.countryCode) updates.originCountry = updates.from_address.countryCode;
+    extractedList.push(`Origin: ${updates.from_address?.city}, ${updates.from_address?.country}`);
+  } else if (/chennai/i.test(textLower)) {
     updates.from_address_id = 'addr-1';
     updates.from_address = mockAddresses[0];
     updates.originCountry = 'IN';
     updates.from_port_code = 'INMAA';
     updates.from_port_name = 'Chennai Port';
-    extractedList.push('Origin: Chennai, India');
-  } else if (/hamburg|germany/i.test(textLower)) {
+    extractedList.push('Origin: Chennai Port, India');
+  } else if (/hamburg/i.test(textLower)) {
     updates.from_address_id = 'addr-3';
     updates.from_address = mockAddresses[2];
     updates.originCountry = 'DE';
     updates.from_port_code = 'DEHAM';
     updates.from_port_name = 'Hamburg Port';
-    extractedList.push('Origin: Hamburg, Germany');
-  } else {
-    updates.from_address_id = 'addr-1';
-    updates.from_address = mockAddresses[0];
-    updates.originCountry = 'IN';
+    extractedList.push('Origin: Hamburg Port, Germany');
+  } else if (aiResponse.from_port_code) {
+    updates.from_port_code = String(aiResponse.from_port_code);
+    if (aiResponse.originCountry) updates.originCountry = String(aiResponse.originCountry).toUpperCase();
+    extractedList.push(`Origin Port: ${updates.from_port_code}`);
+  } else if (aiResponse.originCountry) {
+    updates.originCountry = String(aiResponse.originCountry).toUpperCase();
   }
 
-  // Destination Location
+  // 4. Destination Location (Only set if detected in text or returned by AI)
   if (aiResponse.to_address_id && mockAddresses.some(a => a.id === aiResponse.to_address_id)) {
     updates.to_address_id = aiResponse.to_address_id;
-    updates.to_address = mockAddresses.find(a => a.id === aiResponse.to_address_id) || mockAddresses[1];
-    updates.destCountry = updates.to_address.countryCode || 'US';
-    extractedList.push(`Destination: ${updates.to_address.city}, ${updates.to_address.country}`);
-  } else if (/simi|us|usa|york|new york/i.test(textLower)) {
+    updates.to_address = mockAddresses.find(a => a.id === aiResponse.to_address_id);
+    if (updates.to_address?.countryCode) updates.destCountry = updates.to_address.countryCode;
+    extractedList.push(`Destination: ${updates.to_address?.city}, ${updates.to_address?.country}`);
+  } else if (/simi|new york|pennsauken|nj|ny|us\b|usa\b/i.test(textLower)) {
     updates.to_address_id = 'addr-2';
     updates.to_address = mockAddresses[1];
     updates.destCountry = 'US';
     updates.to_port_code = 'USNYC';
     updates.to_port_name = 'New York Port';
-    extractedList.push('Destination: Simi Valley / NY, US');
+    extractedList.push('Destination: New York / NJ, US');
   } else if (/tokyo|japan/i.test(textLower)) {
     updates.to_address_id = 'addr-4';
     updates.to_address = mockAddresses[3];
@@ -174,106 +203,144 @@ function sanitizeAndNormalizeAIFields(
     updates.to_port_code = 'TYO';
     updates.to_port_name = 'Tokyo Port';
     extractedList.push('Destination: Tokyo, Japan');
+  } else if (aiResponse.to_port_code) {
+    updates.to_port_code = String(aiResponse.to_port_code);
+    if (aiResponse.destCountry) updates.destCountry = String(aiResponse.destCountry).toUpperCase();
+    extractedList.push(`Destination Port: ${updates.to_port_code}`);
+  } else if (aiResponse.destCountry) {
+    updates.destCountry = String(aiResponse.destCountry).toUpperCase();
+  }
+
+  // 5. Service Scope (Only if explicitly specified)
+  if (aiResponse.service_scope) {
+    updates.service_scope = aiResponse.service_scope;
+  }
+
+  // 6. Commodity Description (Extract actual description only)
+  if (aiResponse.commodity_description) {
+    updates.commodity_description = String(aiResponse.commodity_description);
+    extractedList.push(`Commodity: "${updates.commodity_description}"`);
   } else {
-    updates.to_address_id = 'addr-2';
-    updates.to_address = mockAddresses[1];
-    updates.destCountry = 'US';
+    // Check for commodity names directly in text
+    if (/soap/i.test(textLower)) {
+      updates.commodity_description = 'Soaps, Totes & Aprons';
+      extractedList.push('Commodity: "Soaps, Totes & Aprons"');
+    }
   }
 
-  updates.service_scope = 'D2D';
-
-  // Commodity Description & Perishable Flags
-  updates.commodity_description = aiResponse.commodity_description ||
-    (/carrot/i.test(textLower) ? 'Fresh Carrots' : /apparel|textile/i.test(textLower) ? 'Apparel Textiles' : 'General Merchandise');
-  extractedList.push(`Commodity: "${updates.commodity_description}"`);
-
-  const isReefer = Boolean(aiResponse.temperature_control_required) || /carrot|produce|fruit|frozen|cold|reefer/i.test(textLower);
-  if (isReefer) {
+  // 7. Temperature Control (Only if specified)
+  if (aiResponse.temperature_control_required || /\b(temperature|reefer|cold|frozen|chilled|\d+°c)\b/i.test(textLower)) {
     updates.temperature_control_required = true;
-    updates.target_temperature = '2°C to 8°C (Refrigerated)';
-    extractedList.push('Temperature Control: Required (2°C - 8°C)');
+    if (aiResponse.target_temperature) {
+      updates.target_temperature = String(aiResponse.target_temperature);
+    }
+    extractedList.push(`Temperature Control: Required${updates.target_temperature ? ` (${updates.target_temperature})` : ''}`);
   }
 
-  if (Boolean(aiResponse.hazardous_materials) || /hazmat|chemical|battery/i.test(textLower)) {
+  // 8. Hazardous Materials (Only if specified)
+  if (aiResponse.hazardous_materials || /\b(hazmat|dangerous|chemical|un\s*\d+)\b/i.test(textLower)) {
     updates.hazardous_materials = true;
-    updates.un_class_code = 'Class 9 - Miscellaneous Dangerous Goods';
-    extractedList.push('Hazmat: Class 9 Detected');
+    if (aiResponse.un_class_code) {
+      updates.un_class_code = String(aiResponse.un_class_code);
+    }
+    extractedList.push('Hazmat: Dangerous Goods Flagged');
   }
 
-  // Packages & Dimensions
-  let rawPkgs = aiResponse.packages;
-  if (!Array.isArray(rawPkgs) || rawPkgs.length === 0) {
-    rawPkgs = [
-      {
-        id: 'pkg-1',
-        packageType: /pallet/i.test(textLower) ? 'Wooden Pallet' : /crate/i.test(textLower) ? 'Wooden Crate' : 'Corrugated Box',
-        quantity: 15,
-        length: 100,
-        width: 20,
-        height: 90,
-        grossWeight: 18,
-        isStackable: true,
-      },
-    ];
+  // 9. Packages & Dimensions (Process ONLY if extracted from AI/Text - NO FAKE DEFAULTS)
+  if (Array.isArray(aiResponse.packages) && aiResponse.packages.length > 0) {
+    updates.packages = aiResponse.packages.map((p: any, idx: number) => ({
+      id: p.id || `pkg-${idx + 1}`,
+      packageType: p.packageType || p.package_type || 'Corrugated Box',
+      quantity: Number(p.quantity) || 1,
+      length: Number(p.length) || 0,
+      width: Number(p.width) || 0,
+      height: Number(p.height) || 0,
+      grossWeight: Number(p.grossWeight || p.gross_weight) || 0,
+      isStackable: p.isStackable !== false,
+      packedItemDescriptions: Array.isArray(p.packedItemDescriptions) ? p.packedItemDescriptions : [],
+    }));
+    extractedList.push(`Extracted ${updates.packages.length} Package Line(s)`);
   }
 
-  updates.packages = rawPkgs.map((p: any, idx: number) => ({
-    id: p.id || `pkg-${idx + 1}`,
-    packageType: p.packageType || 'Corrugated Box',
-    quantity: Number(p.quantity) || 1,
-    length: Number(p.length) || 100,
-    width: Number(p.width) || 20,
-    height: Number(p.height) || 90,
-    grossWeight: Number(p.grossWeight) || 18,
-    isStackable: p.isStackable !== false,
-    packedItemDescriptions: Array.isArray(p.packedItemDescriptions) ? p.packedItemDescriptions : [updates.commodity_description || 'General Cargo'],
-  }));
+  // 10. Incoterm (Only if explicitly specified in text or AI response)
+  if (aiResponse.incoterm) {
+    updates.incoterm = String(aiResponse.incoterm).toUpperCase();
+    extractedList.push(`Incoterm: ${updates.incoterm}`);
+  } else {
+    const matchedIncoterm = ['DDP', 'FOB', 'CIF', 'EXW', 'DAP', 'FCA'].find(inc => textLower.includes(inc.toLowerCase()));
+    if (matchedIncoterm) {
+      updates.incoterm = matchedIncoterm;
+      extractedList.push(`Incoterm: ${matchedIncoterm}`);
+    }
+  }
 
-  const p0 = updates.packages![0];
-  extractedList.push(`${p0.quantity} x ${p0.packageType} (${p0.length}L x ${p0.width}W x ${p0.height}H cm)`);
+  // 11. Cargo Value & Currency (0 if unstated by customer)
+  if (aiResponse.cargo_value && Number(aiResponse.cargo_value) > 0) {
+    updates.cargo_value = Number(aiResponse.cargo_value);
+    extractedList.push(`Cargo Value: ${updates.cargo_value}`);
+  } else {
+    updates.cargo_value = 0;
+  }
 
-  // Incoterm
-  updates.incoterm = (aiResponse.incoterm && String(aiResponse.incoterm).toUpperCase()) ||
-    (textLower.includes('fob') ? 'FOB' : textLower.includes('cif') ? 'CIF' : 'DDP');
-  extractedList.push(`Incoterm: ${updates.incoterm}`);
+  if (aiResponse.currency) {
+    const rawCurr = String(aiResponse.currency).toUpperCase();
+    if (['USD', 'EUR', 'GBP', 'INR'].includes(rawCurr)) {
+      updates.currency = rawCurr as CurrencyType;
+    }
+  }
 
-  // Cargo Value
-  updates.cargo_value = Number(aiResponse.cargo_value) || (p0.quantity * 25);
-  updates.currency = 'USD';
-
-  // Insurance
-  const wantsInsurance = Boolean(aiResponse.insurance_required) || /insurance|insure|covered/i.test(textLower);
-  updates.insurance_required = wantsInsurance;
-  if (wantsInsurance) {
+  // 12. Insurance & Customs Broker (Only if requested)
+  if (aiResponse.insurance_required || /\b(insurance|insure|covered)\b/i.test(textLower)) {
+    updates.insurance_required = true;
     updates.insurance_provider_type = 'thisai';
-    extractedList.push('Insurance: Requested (Thisai Covered)');
+    extractedList.push('Insurance: Requested');
   }
 
-  // Customs Broker
-  const wantsCustoms = Boolean(aiResponse.destination_customs_clearance) || /customs|clearance/i.test(textLower);
-  updates.destination_customs_clearance = wantsCustoms;
-  if (wantsCustoms) {
+  if (aiResponse.destination_customs_clearance || /\b(customs|clearance|broker)\b/i.test(textLower)) {
+    updates.destination_customs_clearance = true;
     updates.destination_customs_broker = 'Thisai Customs Broker';
     extractedList.push('Customs Clearance: Requested');
   }
 
-  // Commercial Items & HS Code
-  updates.hs_code = aiResponse.hs_code || (isReefer ? '0706.10' : '8543.70');
-  updates.commercial_items = [
-    {
-      id: 'item-1',
-      description: updates.commodity_description || 'General Cargo',
-      hsCode: updates.hs_code,
-      quantity: p0.quantity,
-      unitPrice: Math.round(updates.cargo_value / p0.quantity),
-      netWeight: p0.grossWeight,
-    },
-  ];
+  // 13. Commercial Items & Strict Per-Unit Net Weight (NO STATIC FALLBACKS)
+  if (Array.isArray(aiResponse.commercial_items) && aiResponse.commercial_items.length > 0) {
+    updates.commercial_items = aiResponse.commercial_items.map((item: any, idx: number) => {
+      const qty = Number(item.quantity) || 1;
+      let rawNet = Number(item.netWeight || item.net_weight) || 0;
+
+      // Strict Per-Unit Net Weight Calculation: If total batch weight was returned, divide by quantity
+      if (rawNet > 100 && qty > 1 && rawNet > (qty * 3)) {
+        rawNet = Number((rawNet / qty).toFixed(2));
+      }
+
+      const itemDesc = item.description || `Item ${idx + 1}`;
+      const itemHS = item.hsCode || item.hs_code || '';
+      const itemUnitPrice = Number(item.unitPrice || item.unit_price) || 0;
+
+      return {
+        id: item.id || `item-${idx + 1}`,
+        description: itemDesc,
+        hsCode: itemHS,
+        quantity: qty,
+        unitPrice: itemUnitPrice,
+        netWeight: rawNet,
+      };
+    });
+    extractedList.push(`Extracted ${updates.commercial_items.length} SKU(s)`);
+  }
+
+  // Auto-calculate cargo value only if item prices were explicitly provided
+  if ((!updates.cargo_value || updates.cargo_value === 0) && updates.commercial_items) {
+    const sumVal = updates.commercial_items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    if (sumVal > 0) updates.cargo_value = sumVal;
+  }
 
   updates.other_special_instructions = rawDescription;
 
   const summaryText = aiResponse.extracted_summary ||
-    `AI extracted ${extractedList.length} fields (${extractedList.slice(0, 3).join(', ')}...)`;
+    (extractedList.length > 0
+      ? `AI extracted ${extractedList.length} fields (${extractedList.slice(0, 3).join(', ')})`
+      : 'Extracted shipment parameters from description.');
 
   return {
     extractedCount: extractedList.length,

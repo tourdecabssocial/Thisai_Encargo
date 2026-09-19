@@ -231,14 +231,38 @@
   flex-shrink: 0;
 }
 
-.stage-icon-badge.truck { background: #dbeafe; color: #1d4ed8; }
-.stage-icon-badge.customs { background: #fef3c7; color: #d97706; }
-.stage-icon-badge.ship { background: #e0f2fe; color: #0284c7; }
-.stage-icon-badge.plane { background: #f3e8ff; color: #7e22ce; }
-.stage-icon-badge.shield { background: #dcfce7; color: #15803d; }
-.stage-icon-badge.flame { background: #ffedd5; color: #c2410c; }
-.stage-icon-badge.thermometer { background: #e0e7ff; color: #4338ca; }
-.stage-icon-badge.box { background: #f1f5f9; color: #475569; }
+.stage-icon-badge.truck {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.stage-icon-badge.customs {
+  background: #fef3c7;
+  color: #d97706;
+}
+.stage-icon-badge.ship {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+.stage-icon-badge.plane {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+.stage-icon-badge.shield {
+  background: #dcfce7;
+  color: #15803d;
+}
+.stage-icon-badge.flame {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.stage-icon-badge.thermometer {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+.stage-icon-badge.box {
+  background: #f1f5f9;
+  color: #475569;
+}
 
 .stage-name-text {
   font-size: 1.05rem;
@@ -690,3 +714,4 @@
   align-items: center;
   gap: 0.45rem;
 }
+

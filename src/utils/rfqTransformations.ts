@@ -44,6 +44,7 @@ export const transformRFQPayload = (formData: RFQFormData): RFQSubmissionPayload
     incoterm: formData.incoterm,
     unit_system: formData.unit_system,
     load_type: formData.load_type,
+    loading_type: formData.loading_type || undefined,
     container_type: formData.container_type || undefined,
     container_count: formData.container_count || 1,
     hs_code: formData.hs_code || undefined,
